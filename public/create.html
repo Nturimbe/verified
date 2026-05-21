@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verified — Create Payment Link</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #F4F7FB;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    .header {
+      background: #1B3A6B;
+      padding: 20px;
+      text-align: center;
+    }
+    .header h1 { color: #C8922A; font-size: 28px; }
+    .header p  { color: #AABBD4; font-size: 13px; margin-top: 4px; }
+    .card {
+      background: white;
+      margin: 20px 16px 0;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 {
+      color: #1B3A6B;
+      font-size: 17px;
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    input, select {
+      display: block;
+      width: 100%;
+      padding: 13px 14px;
+      border: 1.5px solid #DDD;
+      border-radius: 8px;
+      font-size: 15px;
+      color: #1B3A6B;
+      margin-bottom: 16px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #C8922A; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #1B3A6B;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+    .btn:active { opacity: 0.85; }
+    .result {
+      display: none;
+      margin-top: 20px;
+    }
+    .result-card {
+      background: #EEF3FA;
+      border-left: 4px solid #C8922A;
+      border-radius: 0 8px 8px 0;
+      padding: 16px;
+    }
+    .result-label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .link-box {
+      background: white;
+      border: 1.5px solid #DDD;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #1B3A6B;
+      word-break: break-all;
+      margin-bottom: 12px;
+    }
+    .copy-btn {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: #C8922A;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .copy-btn:active { opacity: 0.85; }
+    .success-msg {
+      text-align: center;
+      color: #27AE60;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+    .error-msg {
+      background: #FFF0F0;
+      border: 1px solid #FFB3B3;
+      color: #C0392B;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-top: 12px;
+      display: none;
+    }
+    .spinner {
+      display: none;
+      text-align: center;
+      padding: 10px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>✓ Verified</h1>
+    <p>Create a secure payment link</p>
+  </div>
+
+  <div class="card">
+    <h2>New Transaction</h2>
+
+    <label>What are you selling?</label>
+    <input type="text" id="itemName" placeholder="e.g. iPhone 15 Pro, Nike Sneakers" />
+
+    <label>Price (GHS)</label>
+    <input type="number" id="amount" placeholder="e.g. 1500" min="1" />
+
+    <label>Your MoMo Number</label>
+    <input type="tel" id="sellerMomo" placeholder="e.g. 0551234567" maxlength="10" />
+
+    <label>Delivery Window</label>
+    <select id="deliveryHours">
+      <option value="24">Within 24 hours</option>
+      <option value="48" selected>Within 48 hours</option>
+      <option value="72">Within 72 hours</option>
+      <option value="168">Within 7 days</option>
+    </select>
+
+    <button class="btn" onclick="generateLink()">Generate Payment Link</button>
+
+    <div class="spinner" id="spinner">Generating link...</div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="result" id="result">
+      <div class="result-label">Your secure payment link</div>
+      <div class="result-card">
+        <div class="link-box" id="linkDisplay"></div>
+        <button class="copy-btn" onclick="copyLink()">Copy Link to Share</button>
+        <p class="success-msg" id="successMsg">✓ Copied! Share this link with your buyer.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let generatedLink = '';
+
+    async function generateLink() {
+      const itemName      = document.getElementById('itemName').value.trim();
+      const amount        = document.getElementById('amount').value.trim();
+      const sellerMomo    = document.getElementById('sellerMomo').value.trim();
+      const deliveryHours = document.getElementById('deliveryHours').value;
+      const errorMsg      = document.getElementById('errorMsg');
+      const spinner       = document.getElementById('spinner');
+
+      errorMsg.style.display = 'none';
+
+      if (!itemName) { showError('Please enter what you are selling.'); return; }
+      if (!amount || parseFloat(amount) <= 0) { showError('Please enter a valid price.'); return; }
+      if (!sellerMomo || sellerMomo.length < 10) { showError('Please enter your 10-digit MoMo number.'); return; }
+
+      spinner.style.display = 'block';
+      document.querySelector('.btn').disabled = true;
+
+      try {
+        const response = await fetch('/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            itemName,
+            amount: parseFloat(amount),
+            sellerMomo,
+            deliveryHours: parseInt(deliveryHours),
+            buyerEmail: 'pending@verified.gh'
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError(data.error || 'Something went wrong. Please try again.');
+          return;
+        }
+
+        const baseUrl = window.location.origin;
+        generatedLink = `${baseUrl}/pay/${data.id}`;
+
+        document.getElementById('linkDisplay').textContent = generatedLink;
+        document.getElementById('result').style.display = 'block';
+
+      } catch (err) {
+        showError('Could not generate link. Check your connection and try again.');
+      } finally {
+        spinner.style.display = 'none';
+        document.querySelector('.btn').disabled = false;
+      }
+    }
+
+    function copyLink() {
+      navigator.clipboard.writeText(generatedLink).then(() => {
+        document.getElementById('successMsg').style.display = 'block';
+        setTimeout(() => {
+          document.getElementById('successMsg').style.display = 'none';
+        }, 3000);
+      });
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('errorMsg');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

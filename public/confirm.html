@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verified — Confirm Receipt</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #F4F7FB;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    .header {
+      background: #1B3A6B;
+      padding: 20px;
+      text-align: center;
+    }
+    .header h1 { color: #C8922A; font-size: 28px; }
+    .header p  { color: #AABBD4; font-size: 13px; margin-top: 4px; }
+    .card {
+      background: white;
+      margin: 20px 16px 0;
+      border-radius: 12px;
+      padding: 24px 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+    .icon { font-size: 56px; margin-bottom: 12px; }
+    .card h2 { color: #1B3A6B; font-size: 18px; margin-bottom: 8px; }
+    .card p  { color: #555; font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+    .item-box {
+      background: #EEF3FA;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+    .item-box .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+    .item-box .val   { font-size: 16px; color: #1B3A6B; font-weight: bold; }
+    .btn-confirm {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #27AE60;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .btn-problem {
+      display: block;
+      width: 100%;
+      padding: 14px;
+      background: white;
+      color: #C0392B;
+      border: 2px solid #C0392B;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn:active, .btn-confirm:active, .btn-problem:active { opacity: 0.85; }
+    .done-card {
+      display: none;
+      background: #EEF3FA;
+      border-left: 4px solid #27AE60;
+      border-radius: 0 8px 8px 0;
+      padding: 20px;
+      text-align: left;
+      margin-top: 16px;
+    }
+    .done-card h3 { color: #27AE60; margin-bottom: 8px; }
+    .done-card p  { color: #555; font-size: 14px; line-height: 1.5; }
+    #loading { color: #888; font-size: 14px; padding: 20px; }
+    #errorState { color: #C0392B; font-size: 14px; padding: 20px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>✓ Verified</h1>
+    <p>Confirm your delivery</p>
+  </div>
+
+  <div class="card" id="mainCard">
+    <div id="loading">Loading transaction...</div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const txId   = params.get('id');
+
+    async function loadTransaction() {
+      if (!txId) {
+        document.getElementById('loading').innerHTML =
+          '<p style="color:#C0392B">Invalid confirmation link.</p>';
+        return;
+      }
+
+      try {
+        const res  = await fetch(`/transactions/${txId}`);
+        const data = await res.json();
+
+        if (!res.ok || !data.id) {
+          document.getElementById('loading').innerHTML =
+            '<p style="color:#C0392B">Transaction not found.</p>';
+          return;
+        }
+
+        const card = document.getElementById('mainCard');
+
+        if (data.state === 'CONFIRMED' || data.state === 'RESOLVED') {
+          card.innerHTML = `
+            <div class="icon">✅</div>
+            <h2>Already Confirmed</h2>
+            <p>This transaction has been completed and funds have been released to the seller.</p>`;
+          return;
+        }
+
+        if (data.state !== 'DISPATCHED') {
+          card.innerHTML = `
+            <div class="icon">⏳</div>
+            <h2>Not Yet Dispatched</h2>
+            <p>The seller has not yet marked this item as dispatched. You will receive an SMS when it is on the way.</p>`;
+          return;
+        }
+
+        card.innerHTML = `
+          <div class="icon">📦</div>
+          <h2>Did you receive your item?</h2>
+          <p>Only confirm if you have received the item and it matches what was advertised.</p>
+          <div class="item-box">
+            <div class="label">Item</div>
+            <div class="val">${data.itemName}</div>
+          </div>
+          <div class="item-box">
+            <div class="label">Amount paid</div>
+            <div class="val">GHS ${data.amount.toLocaleString()}</div>
+          </div>
+          <button class="btn-confirm" onclick="confirmReceipt()">
+            ✓ Yes, I received it — Release Payment
+          </button>
+          <button class="btn-problem" onclick="raiseProblem()">
+            ✗ There is a problem
+          </button>
+          <div class="done-card" id="doneCard">
+            <h3>✓ Payment Released</h3>
+            <p>Thank you for confirming. The seller has been paid. Transaction complete.</p>
+          </div>`;
+      } catch (err) {
+        document.getElementById('loading').innerHTML =
+          '<p style="color:#C0392B">Could not load transaction. Check your connection.</p>';
+      }
+    }
+
+    async function confirmReceipt() {
+      try {
+        // Move to CONFIRMED
+        await fetch(`/transactions/${txId}/state`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newState: 'CONFIRMED' })
+        });
+
+        // Move to RESOLVED
+        await fetch(`/transactions/${txId}/state`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newState: 'RESOLVED' })
+        });
+
+        document.querySelector('.btn-confirm').style.display = 'none';
+        document.querySelector('.btn-problem').style.display = 'none';
+        document.getElementById('doneCard').style.display   = 'block';
+
+      } catch (err) {
+        alert('Something went wrong. Please try again.');
+      }
+    }
+
+    async function raiseProblem() {
+      const reason = prompt('Briefly describe the problem:');
+      if (!reason) return;
+
+      try {
+        await fetch(`/transactions/${txId}/state`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ newState: 'DISPUTED' })
+        });
+
+        const card = document.getElementById('mainCard');
+        card.innerHTML = `
+          <div class="icon">🔒</div>
+          <h2>Dispute Raised</h2>
+          <p>Your payment is frozen. The Verified team will contact both parties within 48 hours to resolve this.</p>
+          <p style="margin-top:12px;font-size:13px;color:#888;">Reference: ${txId.split('-')[0]}...</p>`;
+
+      } catch (err) {
+        alert('Could not raise dispute. Please try again.');
+      }
+    }
+
+    loadTransaction();
+  </script>
+</body>
+</html>

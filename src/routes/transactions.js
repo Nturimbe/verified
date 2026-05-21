@@ -11,16 +11,15 @@ const USE_MOCK_TRANSFER = true;
 
 // ── POST /transactions ──────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
-  const { itemName, amount, sellerMomo, buyerEmail, deliveryHours } = req.body;
+  const { itemName, amount, sellerMomo, deliveryHours } = req.body;
 
-  if (!itemName || !amount || !sellerMomo || !buyerEmail) {
+  if (!itemName || !amount || !sellerMomo) {
     return res.status(400).json({
-      error: 'itemName, amount, sellerMomo, and buyerEmail are required'
+      error: 'itemName, amount, and sellerMomo are required'
     });
   }
 
   try {
-    // Create transaction in database first
     const transaction = await prisma.transaction.create({
       data: {
         itemName,
@@ -31,25 +30,13 @@ router.post('/', async (req, res) => {
       }
     });
 
-    // Generate Paystack payment link
-    const payment = await initializePayment({
-      email:         buyerEmail,
-      amount:        parseFloat(amount),
-      transactionId: transaction.id,
-      metadata: {
-        itemName,
-        sellerMomo,
-        transactionId: transaction.id
-      }
-    });
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
 
     res.status(201).json({
-      message:       'Transaction created',
-      id:            transaction.id,
-      state:         transaction.state,
-      paymentUrl:    payment.authorization_url,   // Real Paystack payment page
-      accessCode:    payment.access_code,
-      reference:     payment.reference
+      message:    'Transaction created',
+      id:         transaction.id,
+      state:      transaction.state,
+      paymentUrl: `${baseUrl}/pay/${transaction.id}`
     });
 
   } catch (error) {
@@ -104,12 +91,7 @@ router.get('/verify/:reference', async (req, res) => {
         buyerPhone: payment.metadata?.phone || null
       }
     });
-
-    res.json({
-      message: 'Payment confirmed. Funds secured in escrow.',
-      id:      updated.id,
-      state:   updated.state
-    });
+    res.redirect(`/confirm.html?id=${updated.id}`);
 
   } catch (error) {
     console.error(error);
@@ -267,4 +249,44 @@ router.patch('/:id/state', async (req, res) => {
   }
 });
 
+// ── POST /transactions/initiate-payment ─────────────────────────────────────
+// Called by the pay page when buyer clicks Pay
+router.post('/initiate-payment', async (req, res) => {
+  const { transactionId, buyerEmail } = req.body;
+
+  if (!transactionId || !buyerEmail) {
+    return res.status(400).json({ error: 'transactionId and buyerEmail are required' });
+  }
+
+  try {
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: transactionId }
+    });
+
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    if (transaction.state !== 'CREATED') {
+      return res.status(400).json({ error: 'Transaction already paid' });
+    }
+
+    const payment = await initializePayment({
+      email:         buyerEmail,
+      amount:        transaction.amount,
+      transactionId: transaction.id,
+      metadata: {
+        itemName:      transaction.itemName,
+        sellerMomo:    transaction.sellerMomo,
+        transactionId: transaction.id
+      }
+    });
+
+    res.json({ paymentUrl: payment.authorization_url });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Could not initialise payment' });
+  }
+});
 module.exports = router;
