@@ -4,6 +4,7 @@ const prisma   = require('../db');
 const { transition }     = require('../services/stateMachine');
 const { recordMovement } = require('../services/ledger');
 const { initializePayment, verifyPayment, mockTransfer } = require('../services/paystack');
+const { sendSMS, messages } = require('../services/sms');
 
 // Use mock transfer until Paystack activates Transfer API
 // Change this to false once Transfer API is live
@@ -128,12 +129,24 @@ router.post('/webhook', async (req, res) => {
         note:          'Webhook: charge.success received from Paystack'
       });
 
-      await prisma.transaction.update({
-        where: { id: reference },
-        data:  { state: 'FUNDED' }
-      });
+    await prisma.transaction.update({
+  where: { id: reference },
+  data:  { state: 'FUNDED' }
+});
 
-      console.log(`Transaction ${reference} funded via webhook`);
+// Notify seller via SMS
+const funded = await prisma.transaction.findUnique({
+  where: { id: reference }
+});
+
+if (funded && funded.sellerMomo) {
+  await sendSMS(
+    funded.sellerMomo,
+    messages.FUNDED(funded.itemName, funded.amount)
+  );
+}
+
+console.log(`Transaction ${reference} funded via webhook`);
 
     } catch (err) {
       console.error('Webhook processing error:', err);
@@ -162,6 +175,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── PATCH /transactions/:id/state ────────────────────────────────────────────
+
 router.patch('/:id/state', async (req, res) => {
   const { newState, buyerName, buyerPhone } = req.body;
 
@@ -178,9 +192,13 @@ router.patch('/:id/state', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
+    // State machine check
     transition(transaction.state, newState);
 
-    // Ledger entries for money movements
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+
+    // ── Ledger entries + SMS per state ──────────────────────────────────────
+
     if (newState === 'FUNDED') {
       await recordMovement({
         transactionId: transaction.id,
@@ -189,13 +207,60 @@ router.patch('/:id/state', async (req, res) => {
         amount:        transaction.amount,
         note:          'Manual: buyer payment received'
       });
+
+      // Notify seller
+      if (transaction.sellerMomo) {
+        await sendSMS(
+          transaction.sellerMomo,
+          messages.FUNDED(transaction.itemName, transaction.amount)
+        );
+      }
+    }
+
+    if (newState === 'DISPATCHED') {
+      const confirmUrl = `${baseUrl}/confirm.html?id=${transaction.id}`;
+
+      // Notify buyer
+      const buyerNumber = buyerPhone || transaction.buyerPhone;
+      if (buyerNumber) {
+        await sendSMS(
+          buyerNumber,
+          messages.DISPATCHED(transaction.itemName, confirmUrl)
+        );
+      }
+    }
+
+    if (newState === 'CONFIRMED') {
+      // Notify seller — funds coming
+      if (transaction.sellerMomo) {
+        await sendSMS(
+          transaction.sellerMomo,
+          messages.CONFIRMED(transaction.itemName, transaction.amount)
+        );
+      }
+    }
+
+    if (newState === 'DISPUTED') {
+      // Notify both parties
+      if (transaction.sellerMomo) {
+        await sendSMS(
+          transaction.sellerMomo,
+          messages.DISPUTED(transaction.itemName)
+        );
+      }
+      const buyerNumber = buyerPhone || transaction.buyerPhone;
+      if (buyerNumber) {
+        await sendSMS(
+          buyerNumber,
+          messages.DISPUTED(transaction.itemName)
+        );
+      }
     }
 
     if (newState === 'RESOLVED' && transaction.state === 'CONFIRMED') {
       const verifiedFee  = parseFloat((transaction.amount * 0.02).toFixed(2));
       const sellerAmount = parseFloat((transaction.amount - verifiedFee).toFixed(2));
 
-      // Trigger transfer (mock or live based on flag)
       const { transferToMomo } = require('../services/paystack');
       const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
 
@@ -211,7 +276,9 @@ router.patch('/:id/state', async (req, res) => {
         toAccount:     'SELLER_MOMO',
         amount:        sellerAmount,
         reference:     transferResult.transfer_code || transferResult.status,
-        note:          USE_MOCK_TRANSFER ? 'MOCK transfer — swap to live when Transfer API activated' : 'Live transfer to seller MoMo'
+        note:          USE_MOCK_TRANSFER
+          ? 'MOCK transfer — swap to live when Transfer API activated'
+          : 'Live transfer to seller MoMo'
       });
 
       await recordMovement({
@@ -221,8 +288,28 @@ router.patch('/:id/state', async (req, res) => {
         amount:        verifiedFee,
         note:          '2% Verified platform fee'
       });
+
+      // Notify seller — paid
+      if (transaction.sellerMomo) {
+        await sendSMS(
+          transaction.sellerMomo,
+          messages.RESOLVED_SELLER(transaction.itemName, sellerAmount)
+        );
+      }
     }
 
+    if (newState === 'RESOLVED' && transaction.state === 'DISPUTED') {
+      // Notify buyer — dispute resolved
+      const buyerNumber = buyerPhone || transaction.buyerPhone;
+      if (buyerNumber) {
+        await sendSMS(
+          buyerNumber,
+          messages.RESOLVED_BUYER(transaction.itemName)
+        );
+      }
+    }
+
+    // ── Update state in database ─────────────────────────────────────────────
     const updated = await prisma.transaction.update({
       where: { id: req.params.id },
       data: {
@@ -248,6 +335,7 @@ router.patch('/:id/state', async (req, res) => {
     res.status(500).json({ error: 'Failed to update transaction state' });
   }
 });
+    
 
 // ── POST /transactions/initiate-payment ─────────────────────────────────────
 // Called by the pay page when buyer clicks Pay
