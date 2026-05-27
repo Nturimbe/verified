@@ -181,30 +181,40 @@
         alert('Something went wrong. Please try again.');
       }
     }
+async function raiseProblem() {
+  const reason = prompt('Briefly describe the problem:');
+  if (!reason) return;
 
-    async function raiseProblem() {
-      const reason = prompt('Briefly describe the problem:');
-      if (!reason) return;
+  try {
+    const response = await fetch('/disputes', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        transactionId: txId,
+        reason:        reason,
+        reasonCategory: 'BUYER_COMPLAINT',
+        raisedBy:      'BUYER'
+      })
+    });
 
-      try {
-        await fetch(`/transactions/${txId}/state`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ newState: 'DISPUTED' })
-        });
+    const data = await response.json();
 
-        const card = document.getElementById('mainCard');
-        card.innerHTML = `
-          <div class="icon">🔒</div>
-          <h2>Dispute Raised</h2>
-          <p>Your payment is frozen. The Verified team will contact both parties within 48 hours to resolve this.</p>
-          <p style="margin-top:12px;font-size:13px;color:#888;">Reference: ${txId.split('-')[0]}...</p>`;
-
-      } catch (err) {
-        alert('Could not raise dispute. Please try again.');
-      }
+    if (!response.ok) {
+      alert(`Could not raise dispute: ${data.error}`);
+      return;
     }
 
+    const card = document.getElementById('mainCard');
+    card.innerHTML = `
+      <div class="icon">🔒</div>
+      <h2>Dispute Raised</h2>
+      <p>Your payment is frozen. The Verified team will contact both parties within 48 hours to resolve this.</p>
+      <p style="margin-top:12px;font-size:13px;color:#888;">Reference: ${data.disputeId.split('-')[0]}...</p>`;
+
+  } catch (err) {
+    alert('Could not raise dispute. Please try again.');
+  }
+}
     loadTransaction();
   </script>
 </body>

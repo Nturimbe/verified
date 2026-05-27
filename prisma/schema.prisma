@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  
 }
 
 model Transaction {
@@ -37,16 +36,34 @@ model LedgerEntry {
 }
 
 model Dispute {
-  id            String      @id @default(uuid())
-  transactionId String
-  reason        String
-  evidence      String?
-  raisedBy      String
-  status        String      @default("OPEN")
-  decision      String?
-  decidedBy     String?
-  decidedAt     DateTime?
-  createdAt     DateTime    @default(now())
+  id               String      @id @default(uuid())
+  transactionId    String
+  reason           String
+  reasonCategory   String      @default("OTHER")
+  evidence         String?
+  sellerResponse   String?
+  raisedBy         String
+  status           String      @default("OPEN")
+  decision         String?
+  decisionReason   String?
+  decidedBy        String?
+  approvedBy       String?
+  decidedAt        DateTime?
+  responseDeadline DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
-  transaction   Transaction @relation(fields: [transactionId], references: [id])
+  transaction      Transaction      @relation(fields: [transactionId], references: [id])
+  auditLogs        DisputeAuditLog[]
+}
+
+model DisputeAuditLog {
+  id          String   @id @default(uuid())
+  disputeId   String
+  action      String
+  performedBy String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  dispute     Dispute  @relation(fields: [disputeId], references: [id])
 }
