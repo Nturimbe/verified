@@ -29,9 +29,9 @@ async function sendSMS(to, message) {
 }
 
 const messages = {
-  FUNDED: (itemName, amount) =>
-    `Verified: Payment of GHS ${amount} secured for "${itemName}". Dispatch the item to release your funds.`,
-
+  FUNDED: (itemName, amount, dispatchUrl) =>
+  `Verified: Payment of GHS ${amount} secured for "${itemName}". Dispatch the item here: ${dispatchUrl}`,
+  
   DISPATCHED: (itemName, confirmUrl) =>
     `Verified: Your item "${itemName}" is on the way. Confirm receipt here: ${confirmUrl}`,
 

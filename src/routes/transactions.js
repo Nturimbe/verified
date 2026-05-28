@@ -140,9 +140,10 @@ const funded = await prisma.transaction.findUnique({
 });
 
 if (funded && funded.sellerMomo) {
+  const dispatchUrl = `${process.env.BASE_URL}/dispatch.html?id=${funded.id}`;
   await sendSMS(
     funded.sellerMomo,
-    messages.FUNDED(funded.itemName, funded.amount)
+    messages.FUNDED(funded.itemName, funded.amount, dispatchUrl)
   );
 }
 
@@ -210,9 +211,10 @@ router.patch('/:id/state', async (req, res) => {
 
       // Notify seller
       if (transaction.sellerMomo) {
+        const dispatchUrl = `${baseUrl}/dispatch.html?id=${transaction.id}`;
         await sendSMS(
           transaction.sellerMomo,
-          messages.FUNDED(transaction.itemName, transaction.amount)
+          messages.FUNDED(transaction.itemName, transaction.amount, dispatchUrl)
         );
       }
     }
