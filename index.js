@@ -14,6 +14,11 @@ app.use(express.static('public'));
 // Routes
 app.use('/transactions', transactions);
 app.use('/disputes', disputes);
+
+// Redirect root to seller create page
+app.get('/', (req, res) => {
+  res.redirect('/create.html');
+});
 app.use('/', pages);
 
 // Health check
