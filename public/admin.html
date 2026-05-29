@@ -96,6 +96,18 @@
   </div>
 
   <script>
+    // Simple admin gate — change this password before going live
+const ADMIN_PASSWORD = 'verified001';
+
+const entered = sessionStorage.getItem('adminAuth');
+if (entered !== ADMIN_PASSWORD) {
+  const attempt = prompt('Enter admin password:');
+  if (attempt !== ADMIN_PASSWORD) {
+    document.body.innerHTML = '<p style="font-family:Arial;padding:40px;color:#C0392B;">Access denied.</p>';
+    throw new Error('Unauthorised');
+  }
+  sessionStorage.setItem('adminAuth', ADMIN_PASSWORD);
+}
     async function loadDisputes() {
       try {
         const res  = await fetch('/disputes');
