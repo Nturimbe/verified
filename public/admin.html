@@ -171,15 +171,17 @@ if (entered !== ADMIN_PASSWORD) {
               </div>
 
               <div class="reason-box">
-                <strong>Buyer's reason (${d.reasonCategory}):</strong><br>
+                <strong>${d.raisedBy === 'SELLER' ? 'Seller' : 'Buyer'}'s reason (${d.reasonCategory}):</strong><br>
                 ${d.reason}
                 ${d.evidence ? `<br><br><strong>Evidence:</strong> ${d.evidence}` : ''}
               </div>
 
-              ${d.sellerResponse
-                ? `<div class="response-box"><strong>Seller response:</strong><br>${d.sellerResponse}</div>`
-                : `<div class="no-response">Seller has not responded yet${expired ? ' — deadline passed' : ''}</div>`
-              }
+              ${d.raisedBy === 'SELLER'
+                ? ''
+                : d.sellerResponse
+                 ? `<div class="response-box"><strong>Seller response:</strong><br>${d.sellerResponse}</div>`
+                 : `<div class="no-response">Seller has not responded yet${expired ? ' — deadline passed' : ''}</div>`
+          }
 
               <strong style="font-size:13px;color:#1B3A6B">Ledger:</strong>
               ${ledgerHtml}
