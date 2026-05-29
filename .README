@@ -1,0 +1,327 @@
+# Verified — Transaction Escrow
+
+Verified is a payment escrow platform for Ghana's informal digital commerce market.
+A seller generates a payment link in seconds. The buyer pays via Mobile Money. Funds are held securely. The seller dispatches. The buyer confirms receipt. Only then are funds released.
+
+**Live URL:** https://verified-backend-iz59.onrender.com
+
+---
+
+## What It Does
+
+```
+Seller creates link → Buyer pays → Funds held in escrow
+→ Seller dispatches → Buyer confirms → Seller gets paid
+```
+
+If something goes wrong at any point, either party can raise a dispute. Funds freeze automatically. The Verified admin team resolves it with a full audit trail.
+
+---
+
+## Tech Stack
+
+- **Runtime:** Node.js v24
+- **Framework:** Express.js
+- **Database:** PostgreSQL via Prisma v7 (Neon in production, local PostgreSQL in development)
+- **Payments:** Paystack Ghana (MoMo + card)
+- **SMS:** Africa's Talking
+- **Hosting:** Render (free tier)
+
+---
+
+## Prerequisites
+
+Make sure you have these installed before starting:
+
+```bash
+node --version   # v18 or higher
+npm --version    # v9 or higher
+git --version    # any recent version
+```
+
+You also need accounts on:
+- [Paystack](https://paystack.com/gh) — for payment processing (sandbox is fine for testing)
+- [Africa's Talking](https://africastalking.com) — for SMS (sandbox is fine for testing)
+- [PostgreSQL](https://www.postgresql.org/download/) — installed locally, OR use [Neon](https://neon.tech) free tier
+
+---
+
+## Local Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Nturimbe/verified.git
+cd verified
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Create your `.env` file
+
+Create a file named `.env` in the project root and add the following:
+
+```env
+DATABASE_URL="postgresql://postgres:YOURPASSWORD@localhost:5432/verified?schema=public"
+PORT=3000
+PAYSTACK_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PAYSTACK_PUBLIC_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+BASE_URL=http://localhost:3000
+AT_USERNAME=sandbox
+AT_API_KEY=your_africa_talking_sandbox_key
+```
+
+**Notes:**
+- `DATABASE_URL` — your local PostgreSQL connection string. Change `YOURPASSWORD` to your actual PostgreSQL password.
+- `PAYSTACK_SECRET_KEY` / `PAYSTACK_PUBLIC_KEY` — get these from your Paystack dashboard under Settings → API Keys.
+- `BASE_URL` — keep as `http://localhost:3000` for local development.
+- `AT_USERNAME` — use `sandbox` for testing. Use your real AT username for live SMS.
+- `AT_API_KEY` — get from your Africa's Talking dashboard.
+
+### 4. Create the local database
+
+Open PostgreSQL (via pgAdmin or psql) and create a database named `verified`:
+
+```sql
+CREATE DATABASE verified;
+```
+
+### 5. Run migrations
+
+```bash
+npx prisma migrate deploy
+npx prisma generate
+```
+
+### 6. Start the server
+
+```bash
+npm run dev
+```
+
+You should see:
+
+```
+Verified server running on port 3000
+```
+
+---
+
+## Testing the Full Flow
+
+### Step 1 — Seller creates a payment link
+
+Open `http://localhost:3000/create.html` in your browser.
+
+Fill in:
+- What you are selling
+- Price in GHS
+- Your MoMo number
+- Delivery window
+
+Click **Generate Payment Link**. You get a link like:
+```
+http://localhost:3000/pay/TRANSACTION-ID
+```
+
+Note the `TRANSACTION-ID` — you will need it for the next steps.
+
+### Step 2 — Buyer pays
+
+Open the payment link. Click **Pay Securely**. Enter any email address.
+
+You will be redirected to Paystack's sandbox checkout. Use these test card details:
+
+```
+Card number : 4084 0840 8408 4081
+Expiry      : any future date
+CVV         : 408
+OTP         : 123456
+```
+
+After payment, you will be redirected to the confirm page.
+
+### Step 3 — Seller dispatches
+
+Open the dispatch page directly:
+
+```
+http://localhost:3000/dispatch.html?id=TRANSACTION-ID
+```
+
+Click **I Have Dispatched This Item**.
+
+### Step 4 — Buyer confirms receipt
+
+Open the confirm page:
+
+```
+http://localhost:3000/confirm.html?id=TRANSACTION-ID
+```
+
+Click **Yes, I received it — Release Payment**.
+
+The transaction is complete. Funds are released to the seller.
+
+### Step 5 — Test a dispute (optional)
+
+On the confirm page, click **There is a problem** instead of confirming. Enter a reason.
+
+Then open the admin dashboard:
+
+```
+http://localhost:3000/admin.html
+```
+
+You will see the open dispute with full context. Fill in a decision, your name, and for transactions above GHS 500 a second admin name is required. Click **Submit Decision**.
+
+---
+
+## Setting Up Webhooks (for local development)
+
+Paystack needs a public URL to send payment confirmations. For local development, use [ngrok](https://ngrok.com):
+
+```bash
+npm install -g ngrok
+ngrok http 3000
+```
+
+Copy the `https://` URL ngrok gives you. Go to your Paystack dashboard → Settings → API Keys & Webhooks → Webhook URL and set it to:
+
+```
+https://YOUR-NGROK-URL.ngrok-free.app/transactions/webhook
+```
+
+**Important:** ngrok gives you a new URL every time you restart it. Update Paystack webhook URL each time.
+
+---
+
+## Project Structure
+
+```
+verified/
+├── public/
+│   ├── create.html      — Seller: generate a payment link
+│   ├── dispatch.html    — Seller: mark item as dispatched
+│   ├── confirm.html     — Buyer: confirm receipt or raise dispute
+│   └── admin.html       — Admin: view and resolve open disputes
+├── src/
+│   ├── routes/
+│   │   ├── transactions.js  — All transaction endpoints + webhook handler
+│   │   ├── disputes.js      — Dispute creation, response, and resolution
+│   │   └── pages.js         — Serves the buyer payment page (/pay/:id)
+│   ├── services/
+│   │   ├── stateMachine.js  — Enforces valid state transitions
+│   │   ├── ledger.js        — Double-entry ledger for all money movements
+│   │   ├── paystack.js      — Paystack payment + transfer integration
+│   │   └── sms.js           — Africa's Talking SMS notifications
+│   └── db.js                — Prisma client (Postgres via pg adapter)
+├── prisma/
+│   ├── schema.prisma        — Database models
+│   └── migrations/          — Migration history
+├── index.js                 — Express app entry point
+└── .env                     — Environment variables (never commit this)
+```
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/transactions` | Create a new transaction |
+| GET | `/transactions/:id` | View a transaction with ledger |
+| GET | `/transactions/verify/:ref` | Paystack payment callback |
+| POST | `/transactions/webhook` | Paystack webhook handler |
+| PATCH | `/transactions/:id/state` | Move transaction to next state |
+| POST | `/transactions/initiate-payment` | Generate Paystack checkout URL |
+| POST | `/disputes` | Buyer raises a dispute |
+| POST | `/disputes/:id/response` | Seller responds to dispute |
+| GET | `/disputes` | Admin: list all open disputes |
+| GET | `/disputes/:id` | Admin: view single dispute |
+| POST | `/disputes/:id/resolve` | Admin: resolve a dispute |
+| GET | `/pay/:id` | Buyer payment page |
+| GET | `/health` | Server health check |
+
+---
+
+## Transaction States
+
+```
+CREATED → FUNDED → DISPATCHED → CONFIRMED → RESOLVED
+                       ↓
+                   DISPUTED → RESOLVED
+```
+
+| State | Meaning |
+|-------|---------|
+| CREATED | Transaction created, awaiting buyer payment |
+| FUNDED | Buyer paid, funds held in escrow |
+| DISPATCHED | Seller has sent the item |
+| CONFIRMED | Buyer confirmed receipt |
+| DISPUTED | Buyer raised a problem, funds frozen |
+| RESOLVED | Transaction complete (paid out or refunded) |
+
+---
+
+## SMS Notifications
+
+The following SMS messages are sent automatically at each stage:
+
+| Trigger | Recipient | Message |
+|---------|-----------|---------|
+| FUNDED | Seller | Payment secured, dispatch link included |
+| DISPATCHED | Buyer | Item on the way, confirmation link included |
+| CONFIRMED | Seller | Funds released to MoMo |
+| DISPUTED | Both | Dispute raised, team notified |
+| RESOLVED | Both | Outcome with decision |
+
+During development, SMS messages are logged in the Africa's Talking sandbox dashboard under **SMS → Outbox**. Switch `AT_USERNAME` and `AT_API_KEY` to live credentials for real delivery.
+
+---
+
+## Environment Variables Reference
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `PORT` | No | Server port (default: 3000) |
+| `PAYSTACK_SECRET_KEY` | Yes | Paystack secret key (sk_test_ or sk_live_) |
+| `PAYSTACK_PUBLIC_KEY` | Yes | Paystack public key |
+| `BASE_URL` | Yes | Public URL of this server |
+| `AT_USERNAME` | Yes | Africa's Talking username (use "sandbox" for testing) |
+| `AT_API_KEY` | Yes | Africa's Talking API key |
+
+---
+
+## Deployment (Render)
+
+The live version is deployed on Render. To deploy your own instance:
+
+1. Fork this repository
+2. Create a new Web Service on [render.com](https://render.com)
+3. Connect your GitHub repo
+4. Set Build Command: `npm install && npx prisma generate`
+5. Set Start Command: `node index.js`
+6. Add all environment variables from the table above
+7. For `DATABASE_URL`, use a [Neon](https://neon.tech) PostgreSQL connection string
+8. Run `npx prisma migrate deploy` locally against the Neon database before first deploy
+
+---
+
+## Known Limitations (Pre-Pilot)
+
+- **Mock transfers:** The Paystack Transfer API (seller payouts) is mocked until business registration is complete and Paystack activates the Transfer API. The `USE_MOCK_TRANSFER` flag in `src/routes/transactions.js` controls this. Set to `false` when live.
+- **Sandbox SMS:** SMS reaches real phones only with live Africa's Talking credentials.
+- **Free tier spin-down:** The Render free tier sleeps after 15 minutes of inactivity. First request after sleep takes up to 50 seconds. Upgrade to paid tier for always-on production use.
+
+---
+
+## Built By
+
+Verified Group · University of Ghana  
+3i FinTech Innovation Challenge 2026
