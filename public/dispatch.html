@@ -53,6 +53,98 @@
   </div>
 
   <script>
+    function showPreDispatchDispute() {
+  document.getElementById('preDisputeForm').style.display = 'block';
+}
+
+async function submitPreDispute() {
+  const reason = document.getElementById('preDisputeReason').value.trim();
+  if (!reason) {
+    alert('Please describe the problem.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/disputes', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        transactionId:  txId,
+        reason:         reason,
+        reasonCategory: 'SELLER_COMPLAINT',
+        raisedBy:       'SELLER'
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(`Could not raise dispute: ${data.error}`);
+      return;
+    }
+
+    document.getElementById('mainCard').innerHTML = `
+      <div style="text-align:center;font-size:48px;margin-bottom:12px">🔒</div>
+      <h2 style="color:#1B3A6B;text-align:center;margin-bottom:8px">Dispute Raised</h2>
+      <p style="color:#555;text-align:center;font-size:14px;">
+        Funds are frozen. The Verified team will contact both parties within 48 hours.
+      </p>
+      <p style="text-align:center;font-size:12px;color:#888;margin-top:8px;">
+        Reference: ${data.disputeId.split('-')[0]}...
+      </p>`;
+
+  } catch (err) {
+    alert('Something went wrong. Please try again.');
+  }
+}
+    function showDisputeForm() {
+  document.getElementById('disputeForm').style.display = 'block';
+  document.querySelector('#doneCard button').style.display = 'none';
+}
+
+async function submitSellerDispute() {
+  const reason = document.getElementById('disputeReason').value.trim();
+  if (!reason) {
+    alert('Please describe the problem before submitting.');
+    return;
+  }
+
+  try {
+    const res = await fetch('/disputes', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        transactionId: txId,
+        reason:        reason,
+        reasonCategory: 'SELLER_COMPLAINT',
+        raisedBy:      'SELLER'
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(`Could not raise dispute: ${data.error}`);
+      return;
+    }
+
+    document.getElementById('disputeForm').innerHTML = `
+      <div style="background:#EEF3FA;border-left:4px solid #C0392B;
+        border-radius:0 8px 8px 0;padding:16px;margin-top:8px;">
+        <h3 style="color:#C0392B;margin-bottom:8px;">🔒 Dispute Raised</h3>
+        <p style="font-size:14px;color:#555;">
+          Your dispute has been submitted. Funds are frozen.
+          The Verified team will contact both parties within 48 hours.
+        </p>
+        <p style="font-size:12px;color:#888;margin-top:8px;">
+          Reference: ${data.disputeId.split('-')[0]}...
+        </p>
+      </div>`;
+
+  } catch (err) {
+    alert('Something went wrong. Please try again.');
+  }
+}
     const params = new URLSearchParams(window.location.search);
     const txId   = params.get('id');
 
@@ -130,12 +222,52 @@
           <button class="btn" id="dispatchBtn" onclick="markDispatched()">
             ✓ I Have Dispatched This Item
           </button>
+          <button class="btn" id="dispatchBtn" onclick="markDispatched()">
+  ✓ I Have Dispatched This Item
+</button>
+
+<p style="text-align:center;margin-top:14px;font-size:13px;color:#888;">
+  Problem before dispatching?
+  <a href="#" style="color:#C0392B;" onclick="showPreDispatchDispute()">Raise a dispute</a>
+</p>
+
+<div id="preDisputeForm" style="display:none;margin-top:12px;">
+  <textarea id="preDisputeReason"
+    placeholder="Describe the problem (e.g. buyer asked to cancel, suspicious request...)"
+    style="width:100%;padding:12px;border:1.5px solid #DDD;border-radius:8px;
+    font-size:14px;font-family:Arial,sans-serif;height:80px;resize:vertical;"></textarea>
+  <button class="btn" style="margin-top:8px;background:#C0392B;" onclick="submitPreDispute()">
+    Submit Dispute
+  </button>
+</div>
 
           <div class="done-card" id="doneCard">
-            <h3>✓ Dispatch Confirmed</h3>
-            <p>Your buyer has been notified via SMS with a confirmation link.
-            Funds will be released to your MoMo once they confirm receipt.</p>
-          </div>`;
+  <h3>✓ Dispatch Confirmed</h3>
+  <p>Your buyer has been notified via SMS with a confirmation link.
+  Funds will be released to your MoMo once they confirm receipt.</p>
+  <p style="margin-top:14px;font-size:13px;color:#888;">
+    If your item is returned or the buyer is unresponsive after the delivery window,
+    you can raise a dispute below.
+  </p>
+  <button class="btn" style="background:#C0392B;margin-top:12px;" onclick="showDisputeForm()">
+    Raise a Problem
+  </button>
+</div>
+
+<div id="disputeForm" style="display:none;margin-top:16px;">
+  <div class="info-box" style="border-left-color:#C0392B;">
+    <strong>Raise a dispute as seller.</strong><br>
+    Describe what went wrong. Funds remain frozen until the Verified team resolves it.
+  </div>
+  <textarea id="disputeReason" placeholder="Describe the problem (e.g. item was returned, buyer unresponsive after 72 hours...)"
+    style="width:100%;padding:12px;border:1.5px solid #DDD;border-radius:8px;
+    font-size:14px;font-family:Arial,sans-serif;height:90px;
+    resize:vertical;margin-top:10px;"></textarea>
+  <button class="btn" style="margin-top:10px;background:#C0392B;" onclick="submitSellerDispute()">
+    Submit Dispute
+  </button>
+</div>
+        `;
 
       } catch (err) {
         document.getElementById('loading').innerHTML =
