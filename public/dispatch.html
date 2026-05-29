@@ -197,77 +197,79 @@ async function submitSellerDispute() {
             </p>`;
           return;
         }
-
         card.innerHTML = `
-          <div class="label">Item</div>
-          <div class="value">${data.itemName}</div>
+  <div class="label">Item</div>
+  <div class="value">${data.itemName}</div>
 
-          <div class="label">Amount in Escrow</div>
-          <div class="amount">GHS ${data.amount.toLocaleString()}</div>
+  <div class="label">Amount in Escrow</div>
+  <div class="amount">GHS ${data.amount.toLocaleString()}</div>
 
-          <hr class="divider">
+  <hr class="divider">
 
-          <div class="label">Buyer</div>
-          <div class="value">${data.buyerName || 'Buyer'} ${data.buyerPhone ? '· ' + data.buyerPhone : ''}</div>
+  <div class="label">Buyer</div>
+  <div class="value">${data.buyerName || 'Buyer'} ${data.buyerPhone ? '· ' + data.buyerPhone : ''}</div>
 
-          <div class="label">Delivery Window</div>
-          <div class="value">${data.deliveryHours} hours</div>
+  <div class="label">Delivery Window</div>
+  <div class="value">${data.deliveryHours} hours</div>
 
-          <div class="info-box">
-            <strong>Ready to dispatch?</strong><br>
-            Once you click the button below, your buyer receives an SMS with a confirmation link.
-            Funds are released to your MoMo only after they confirm receipt.
-          </div>
-
-          <button class="btn" id="dispatchBtn" onclick="markDispatched()">
-            ✓ I Have Dispatched This Item
-          </button>
-          <button class="btn" id="dispatchBtn" onclick="markDispatched()">
-  ✓ I Have Dispatched This Item
-</button>
-
-<p style="text-align:center;margin-top:14px;font-size:13px;color:#888;">
-  Problem before dispatching?
-  <a href="#" style="color:#C0392B;" onclick="showPreDispatchDispute()">Raise a dispute</a>
-</p>
-
-<div id="preDisputeForm" style="display:none;margin-top:12px;">
-  <textarea id="preDisputeReason"
-    placeholder="Describe the problem (e.g. buyer asked to cancel, suspicious request...)"
-    style="width:100%;padding:12px;border:1.5px solid #DDD;border-radius:8px;
-    font-size:14px;font-family:Arial,sans-serif;height:80px;resize:vertical;"></textarea>
-  <button class="btn" style="margin-top:8px;background:#C0392B;" onclick="submitPreDispute()">
-    Submit Dispute
-  </button>
-</div>
-
-          <div class="done-card" id="doneCard">
-  <h3>✓ Dispatch Confirmed</h3>
-  <p>Your buyer has been notified via SMS with a confirmation link.
-  Funds will be released to your MoMo once they confirm receipt.</p>
-  <p style="margin-top:14px;font-size:13px;color:#888;">
-    If your item is returned or the buyer is unresponsive after the delivery window,
-    you can raise a dispute below.
-  </p>
-  <button class="btn" style="background:#C0392B;margin-top:12px;" onclick="showDisputeForm()">
-    Raise a Problem
-  </button>
-</div>
-
-<div id="disputeForm" style="display:none;margin-top:16px;">
-  <div class="info-box" style="border-left-color:#C0392B;">
-    <strong>Raise a dispute as seller.</strong><br>
-    Describe what went wrong. Funds remain frozen until the Verified team resolves it.
+  <div class="info-box">
+    <strong>Ready to dispatch?</strong><br>
+    Once you click the button below, your buyer receives an SMS with a
+    confirmation link. Funds are released to your MoMo only after they
+    confirm receipt.
   </div>
-  <textarea id="disputeReason" placeholder="Describe the problem (e.g. item was returned, buyer unresponsive after 72 hours...)"
-    style="width:100%;padding:12px;border:1.5px solid #DDD;border-radius:8px;
-    font-size:14px;font-family:Arial,sans-serif;height:90px;
-    resize:vertical;margin-top:10px;"></textarea>
-  <button class="btn" style="margin-top:10px;background:#C0392B;" onclick="submitSellerDispute()">
-    Submit Dispute
+
+  <button class="btn" id="dispatchBtn" onclick="markDispatched()">
+    ✓ I Have Dispatched This Item
   </button>
-</div>
-        `;
+
+  <p style="text-align:center;margin-top:14px;font-size:13px;color:#888;">
+    Problem before dispatching?
+    <a href="#" style="color:#C0392B;" onclick="event.preventDefault();showPreDispatchDispute()">
+      Raise a dispute
+    </a>
+  </p>
+
+  <div id="preDisputeForm" style="display:none;margin-top:12px;">
+    <textarea id="preDisputeReason"
+      placeholder="Describe the problem..."
+      style="width:100%;padding:12px;border:1.5px solid #DDD;border-radius:8px;
+      font-size:14px;font-family:Arial,sans-serif;height:80px;resize:vertical;"></textarea>
+    <button class="btn" style="margin-top:8px;background:#C0392B;"
+      onclick="submitPreDispute()">
+      Submit Dispute
+    </button>
+  </div>
+
+  <div class="done-card" id="doneCard">
+    <h3>✓ Dispatch Confirmed</h3>
+    <p>Your buyer has been notified via SMS with a confirmation link.
+    Funds will be released to your MoMo once they confirm receipt.</p>
+    <p style="margin-top:14px;font-size:13px;color:#888;">
+      If your item is returned or the buyer is unresponsive after the
+      delivery window, you can raise a dispute below.
+    </p>
+    <button class="btn" style="background:#C0392B;margin-top:12px;"
+      onclick="showDisputeForm()">
+      Raise a Problem
+    </button>
+  </div>
+
+  <div id="disputeForm" style="display:none;margin-top:16px;">
+    <div class="info-box" style="border-left-color:#C0392B;">
+      <strong>Raise a dispute as seller.</strong><br>
+      Describe what went wrong. Funds remain frozen until resolved.
+    </div>
+    <textarea id="disputeReason"
+      placeholder="Describe the problem..."
+      style="width:100%;padding:12px;border:1.5px solid #DDD;border-radius:8px;
+      font-size:14px;font-family:Arial,sans-serif;height:90px;
+      resize:vertical;margin-top:10px;"></textarea>
+    <button class="btn" style="margin-top:10px;background:#C0392B;"
+      onclick="submitSellerDispute()">
+      Submit Dispute
+    </button>
+  </div>`;
 
       } catch (err) {
         document.getElementById('loading').innerHTML =
@@ -276,38 +278,42 @@ async function submitSellerDispute() {
     }
 
     async function markDispatched() {
-      const btn = document.getElementById('dispatchBtn');
-      btn.textContent = 'Marking as dispatched...';
-      btn.classList.add('btn-disabled');
-      btn.disabled = true;
+  const btn = document.getElementById('dispatchBtn');
+  btn.textContent = 'Marking as dispatched...';
+  btn.classList.add('btn-disabled');
+  btn.disabled = true;
 
-      try {
-        const res = await fetch(`/transactions/${txId}/state`, {
-          method:  'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ newState: 'DISPATCHED' })
-        });
+  try {
+    const res = await fetch(`/transactions/${txId}/state`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ newState: 'DISPATCHED' })
+    });
 
-        const data = await res.json();
+    const data = await res.json();
 
-        if (!res.ok) {
-          alert(`Error: ${data.error}`);
-          btn.textContent = '✓ I Have Dispatched This Item';
-          btn.classList.remove('btn-disabled');
-          btn.disabled = false;
-          return;
-        }
-
-        btn.style.display = 'none';
-        document.getElementById('doneCard').style.display = 'block';
-
-      } catch (err) {
-        alert('Something went wrong. Please try again.');
-        btn.textContent = '✓ I Have Dispatched This Item';
-        btn.classList.remove('btn-disabled');
-        btn.disabled = false;
-      }
+    if (!res.ok) {
+      alert(`Error: ${data.error}`);
+      btn.textContent = '✓ I Have Dispatched This Item';
+      btn.classList.remove('btn-disabled');
+      btn.disabled = false;
+      return;
     }
+
+    // Hide the dispatch button and pre-dispatch dispute link
+    btn.style.display = 'none';
+    btn.nextElementSibling.style.display = 'none';
+
+    // Show the done card
+    document.getElementById('doneCard').style.display = 'block';
+
+  } catch (err) {
+    alert('Something went wrong. Please try again.');
+    btn.textContent = '✓ I Have Dispatched This Item';
+    btn.classList.remove('btn-disabled');
+    btn.disabled = false;
+  }
+}
 
     loadTransaction();
   </script>
