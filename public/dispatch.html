@@ -223,6 +223,23 @@ async function submitSellerDispute() {
           return;
         }
 
+        if (data.state === 'DISPUTED') {
+  card.innerHTML = `
+    <div style="text-align:center;font-size:48px;margin-bottom:12px">🔒</div>
+    <h2 style="color:#C0392B;text-align:center;margin-bottom:8px">
+      Dispute In Progress
+    </h2>
+    <p style="color:#888;text-align:center;font-size:14px;line-height:1.6;">
+      A dispute has been raised on this transaction.<br>
+      Funds are frozen. The Verified team will contact<br>
+      both parties within 48 hours.
+    </p>
+    <p style="text-align:center;font-size:12px;color:#aaa;margin-top:12px;">
+      Transaction ID: ${txId.split('-')[0]}...
+    </p>`;
+  return;
+}
+
         if (data.state !== 'FUNDED') {
           card.innerHTML = `
             <div style="text-align:center;font-size:48px;margin-bottom:12px">⏳</div>

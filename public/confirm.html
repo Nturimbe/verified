@@ -113,6 +113,19 @@
 
         const card = document.getElementById('mainCard');
 
+        if (data.state === 'DISPUTED') {
+  card.innerHTML = `
+    <div class="icon">🔒</div>
+    <h2>Dispute In Progress</h2>
+    <p>A dispute has been raised on this transaction. Your payment is
+    frozen and protected. The Verified team will contact both parties
+    within 48 hours to resolve this.</p>
+    <p style="margin-top:12px;font-size:13px;color:#888;">
+      Nothing further is required from you right now.
+    </p>`;
+  return;
+}
+
         if (data.state === 'CONFIRMED' || data.state === 'RESOLVED') {
           card.innerHTML = `
             <div class="icon">✅</div>
