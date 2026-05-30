@@ -125,15 +125,37 @@
     </p>`;
   return;
 }
-
         if (data.state === 'CONFIRMED' || data.state === 'RESOLVED') {
-          card.innerHTML = `
-            <div class="icon">✅</div>
-            <h2>Already Confirmed</h2>
-            <p>This transaction has been completed and funds have been released to the seller.</p>`;
-          return;
-        }
+  const resolvedDispute = (data.disputes || []).find(
+    d => d.status === 'RESOLVED'
+  );
 
+  let icon    = '✅';
+  let heading = 'Transaction Complete';
+  let message = 'You confirmed receipt. Funds have been released to the seller. Thank you for using Verified.';
+
+  if (resolvedDispute) {
+    if (resolvedDispute.decision === 'REFUND_TO_BUYER') {
+      icon    = '💰';
+      heading = 'Refund Approved';
+      message = 'The Verified team resolved this dispute in your favour. Your refund is being processed back to your MoMo.';
+    } else if (resolvedDispute.decision === 'RELEASE_TO_SELLER') {
+      icon    = '✅';
+      heading = 'Dispute Resolved';
+      message = 'The Verified team reviewed this dispute and released payment to the seller.';
+    }
+  }
+
+  card.innerHTML = `
+    <div class="icon">${icon}</div>
+    <h2>${heading}</h2>
+    <p>${message}</p>
+    <p style="margin-top:12px;font-size:12px;color:#aaa;">
+      Transaction ID: ${data.id.split('-')[0]}...
+    </p>`;
+  return;
+}
+        
         if (data.state !== 'DISPATCHED') {
           card.innerHTML = `
             <div class="icon">⏳</div>
