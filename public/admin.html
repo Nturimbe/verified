@@ -6,16 +6,16 @@
   <title>Verified — Admin Disputes</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #F4F7FB; min-height: 100vh; }
+    body { font-family: Arial, sans-serif; background: #F4FBF7; min-height: 100vh; }
     .header {
-      background: #1B3A6B; padding: 18px 24px;
+      background: #1A7A4A; padding: 18px 24px;
       display: flex; align-items: center; justify-content: space-between;
     }
-    .header h1 { color: #C8922A; font-size: 22px; }
-    .header span { color: #AABBD4; font-size: 13px; }
+    .header h1 { color: #F5C518; font-size: 22px; }
+    .header span { color: #A8D5B8; font-size: 13px; }
     .container { padding: 20px 24px; max-width: 1000px; margin: 0 auto; }
     .section-title {
-      font-size: 15px; font-weight: bold; color: #1B3A6B;
+      font-size: 15px; font-weight: bold; color: #1A7A4A;
       margin: 20px 0 12px; text-transform: uppercase; letter-spacing: 1px;
     }
     .dispute-card {
@@ -28,8 +28,8 @@
       display: flex; justify-content: space-between;
       align-items: flex-start; margin-bottom: 10px;
     }
-    .item-name { font-size: 16px; font-weight: bold; color: #1B3A6B; }
-    .amount { font-size: 18px; font-weight: bold; color: #C8922A; }
+    .item-name { font-size: 16px; font-weight: bold; color: #1A7A4A; }
+    .amount { font-size: 18px; font-weight: bold; color: #F5C518; }
     .meta { font-size: 12px; color: #888; margin-bottom: 8px; }
     .reason-box {
       background: #FFF5F5; border: 1px solid #FFD5D5;
@@ -64,11 +64,11 @@
     }
     .resolve-section textarea { height: 70px; resize: vertical; }
     .btn-resolve {
-      width: 100%; padding: 13px; background: #1B3A6B;
+      width: 100%; padding: 13px; background: #1A7A4A;
       color: white; border: none; border-radius: 6px;
       font-size: 14px; font-weight: bold; cursor: pointer;
     }
-    .btn-resolve:hover { background: #162F55; }
+    .btn-resolve:hover { background: #145C37; }
     .badge {
       display: inline-block; padding: 3px 10px; border-radius: 12px;
       font-size: 11px; font-weight: bold; margin-left: 8px;
@@ -78,7 +78,7 @@
     .empty { text-align: center; color: #888; padding: 40px 20px; font-size: 15px; }
     .loading { text-align: center; color: #888; padding: 40px; }
     .ledger-summary {
-      background: #EEF3FA; border-radius: 6px;
+      background: #EDF7F2; border-radius: 6px;
       padding: 10px 12px; margin: 8px 0; font-size: 12px;
     }
     .ledger-row { display: flex; justify-content: space-between; padding: 3px 0; }
@@ -183,7 +183,7 @@ if (entered !== ADMIN_PASSWORD) {
                  : `<div class="no-response">Seller has not responded yet${expired ? ' — deadline passed' : ''}</div>`
           }
 
-              <strong style="font-size:13px;color:#1B3A6B">Ledger:</strong>
+              <strong style="font-size:13px;color:#1A7A4A">Ledger:</strong>
               ${ledgerHtml}
 
               <div class="audit-trail">

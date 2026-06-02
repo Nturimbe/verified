@@ -6,33 +6,33 @@
   <title>Verified — Dispatch Item</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #F4F7FB; min-height: 100vh; padding-bottom: 40px; }
-    .header { background: #1B3A6B; padding: 18px 20px; text-align: center; }
-    .header h1 { color: #C8922A; font-size: 26px; }
-    .header p  { color: #AABBD4; font-size: 13px; margin-top: 4px; }
+    body { font-family: Arial, sans-serif; background: #F4FBF7; min-height: 100vh; padding-bottom: 40px; }
+    .header { background: #1A7A4A; padding: 18px 20px; text-align: center; }
+    .header h1 { color: #F5C518; font-size: 26px; }
+    .header p  { color: #A8D5B8; font-size: 13px; margin-top: 4px; }
     .card {
       background: white; margin: 20px 16px 0;
       border-radius: 12px; padding: 24px 20px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     .label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-    .value { font-size: 16px; color: #1B3A6B; font-weight: bold; margin-bottom: 16px; }
-    .amount { font-size: 32px; color: #1B3A6B; font-weight: bold; margin-bottom: 4px; }
+    .value { font-size: 16px; color: #1A7A4A; font-weight: bold; margin-bottom: 16px; }
+    .amount { font-size: 32px; color: #1A7A4A; font-weight: bold; margin-bottom: 4px; }
     .info-box {
-      background: #EEF3FA; border-left: 4px solid #C8922A;
+      background: #EDF7F2; border-left: 4px solid #F5C518;
       border-radius: 0 8px 8px 0; padding: 14px 16px; margin: 16px 0;
       font-size: 13px; color: #444; line-height: 1.6;
     }
     .btn {
       display: block; width: 100%; padding: 16px;
-      background: #1B3A6B; color: white; border: none;
+      background: #1A7A4A; color: white; border: none;
       border-radius: 8px; font-size: 17px; font-weight: bold;
       cursor: pointer; margin-top: 8px; text-align: center;
     }
     .btn:active { opacity: 0.85; }
     .btn-disabled { background: #CCCCCC; cursor: not-allowed; }
     .done-card {
-      display: none; background: #EEF3FA;
+      display: none; background: #EDF7F2;
       border-left: 4px solid #27AE60; border-radius: 0 8px 8px 0;
       padding: 20px; margin-top: 16px;
     }
@@ -85,7 +85,7 @@ async function submitPreDispute() {
 
     document.getElementById('mainCard').innerHTML = `
       <div style="text-align:center;font-size:48px;margin-bottom:12px">🔒</div>
-      <h2 style="color:#1B3A6B;text-align:center;margin-bottom:8px">Dispute Raised</h2>
+      <h2 style="color:#1A7A4A;text-align:center;margin-bottom:8px">Dispute Raised</h2>
       <p style="color:#555;text-align:center;font-size:14px;">
         Funds are frozen. The Verified team will contact both parties within 48 hours.
       </p>
@@ -129,7 +129,7 @@ async function submitSellerDispute() {
     }
 
     document.getElementById('disputeForm').innerHTML = `
-      <div style="background:#EEF3FA;border-left:4px solid #C0392B;
+      <div style="background:#EDF7F2;border-left:4px solid #C0392B;
         border-radius:0 8px 8px 0;padding:16px;margin-top:8px;">
         <h3 style="color:#C0392B;margin-bottom:8px;">🔒 Dispute Raised</h3>
         <p style="font-size:14px;color:#555;">
@@ -170,7 +170,7 @@ async function submitSellerDispute() {
         if (data.state === 'DISPATCHED') {
   card.innerHTML = `
     <div style="text-align:center;font-size:48px;margin-bottom:12px">✅</div>
-    <h2 style="color:#1B3A6B;text-align:center;margin-bottom:8px">Already Dispatched</h2>
+    <h2 style="color:#1A7A4A;text-align:center;margin-bottom:8px">Already Dispatched</h2>
     <p style="color:#888;text-align:center;font-size:14px;margin-bottom:20px;">
       You have already marked this item as dispatched.<br>
       Waiting for buyer to confirm receipt.
@@ -203,7 +203,7 @@ async function submitSellerDispute() {
     </div>
 
     <div id="postDisputeDone" style="display:none;margin-top:14px;
-      background:#EEF3FA;border-left:4px solid #C0392B;
+      background:#EDF7F2;border-left:4px solid #C0392B;
       border-radius:0 8px 8px 0;padding:16px;">
       <h3 style="color:#C0392B;margin-bottom:8px;">🔒 Dispute Raised</h3>
       <p style="font-size:14px;color:#555;">
@@ -235,7 +235,7 @@ async function submitSellerDispute() {
 
   card.innerHTML = `
     <div style="text-align:center;font-size:48px;margin-bottom:12px">${icon}</div>
-    <h2 style="color:#1B3A6B;text-align:center;margin-bottom:8px">${heading}</h2>
+    <h2 style="color:#1A7A4A;text-align:center;margin-bottom:8px">${heading}</h2>
     <p style="color:#888;text-align:center;font-size:14px;line-height:1.6;">${message}</p>
     <p style="text-align:center;font-size:12px;color:#aaa;margin-top:12px;">
       Transaction ID: ${data.id.split('-')[0]}...
@@ -263,7 +263,7 @@ async function submitSellerDispute() {
         if (data.state !== 'FUNDED') {
           card.innerHTML = `
             <div style="text-align:center;font-size:48px;margin-bottom:12px">⏳</div>
-            <h2 style="color:#1B3A6B;text-align:center;margin-bottom:8px">Not Ready</h2>
+            <h2 style="color:#1A7A4A;text-align:center;margin-bottom:8px">Not Ready</h2>
             <p style="color:#888;text-align:center;font-size:14px">
               This transaction is not yet funded. Current status: ${data.state}
             </p>`;
