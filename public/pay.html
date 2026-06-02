@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verified — Pay Securely</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #F4F7FB;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    .header {
+      background: #1B3A6B;
+      padding: 18px 20px;
+      text-align: center;
+    }
+    .header h1 { color: #C8922A; font-size: 26px; }
+    .header p  { color: #AABBD4; font-size: 13px; margin-top: 4px; }
+    .card {
+      background: white;
+      margin: 20px 16px 0;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .label {
+      font-size: 11px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+    .value {
+      font-size: 16px;
+      color: #1B3A6B;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .amount {
+      font-size: 32px;
+      color: #1B3A6B;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    .escrow-badge {
+      background: #EEF3FA;
+      border-left: 4px solid #C8922A;
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .escrow-badge p {
+      font-size: 13px;
+      color: #444;
+      line-height: 1.5;
+    }
+    .escrow-badge strong { color: #1B3A6B; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      background: #C8922A;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 17px;
+      font-weight: bold;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 8px;
+    }
+    .btn:active { opacity: 0.85; }
+    .btn-disabled { background: #CCCCCC; cursor: not-allowed; }
+    .state-note {
+      background: #EEF3FA;
+      color: #1B3A6B;
+      padding: 14px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid #EEE;
+      margin: 16px 0;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 28px;
+      color: #888;
+      font-size: 12px;
+      padding: 0 20px;
+    }
+    .legal {
+      text-align: center;
+      padding: 20px 16px 8px;
+      font-size: 12px;
+      color: #888;
+    }
+    .legal a { color: #888; margin: 0 8px; }
+    #loading { text-align: center; color: #888; padding: 40px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>✓ Verified</h1>
+    <p>Pay. Confirm. Done.</p>
+  </div>
+
+  <div class="card" id="mainCard">
+    <div id="loading">Loading payment details...</div>
+  </div>
+
+  <div class="footer" id="txFooter" style="display:none;">
+    <p id="txId"></p>
+    <p style="margin-top:6px;">Protected by Verified Escrow</p>
+  </div>
+
+  <div class="legal">
+    <a href="/terms.html">Terms</a> ·
+    <a href="/privacy.html">Privacy</a> ·
+    <a href="/dispute-policy.html">Dispute Policy</a>
+  </div>
+
+  <script>
+    // Get transaction ID from URL — works for both:
+    // /pay/TRANSACTION-ID  (old server route)
+    // /pay.html?id=TRANSACTION-ID  (new static route)
+    function getTransactionId() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('id')) return params.get('id');
+
+      // Extract from path /pay/UUID
+      const parts = window.location.pathname.split('/');
+      const idx   = parts.indexOf('pay');
+      if (idx !== -1 && parts[idx + 1]) return parts[idx + 1];
+
+      return null;
+    }
+
+    const txId = getTransactionId();
+
+    const stateMessages = {
+      FUNDED:     'Payment already secured for this transaction.',
+      DISPATCHED: 'This item has been dispatched.',
+      CONFIRMED:  'This transaction is complete.',
+      RESOLVED:   'This transaction is complete.',
+      DISPUTED:   'This transaction is under review.'
+    };
+
+    async function loadPayPage() {
+      if (!txId) {
+        document.getElementById('loading').innerHTML =
+          '<p style="color:#C0392B">Invalid payment link.</p>';
+        return;
+      }
+
+      try {
+        const res  = await fetch(`/transactions/${txId}`);
+        const data = await res.json();
+
+        if (!res.ok || !data.id) {
+          document.getElementById('loading').innerHTML =
+            '<p style="color:#C0392B">This payment link is invalid or has expired.</p>';
+          return;
+        }
+
+        const card      = document.getElementById('mainCard');
+        const alreadyPaid = data.state !== 'CREATED';
+        const maskedMomo  = data.sellerMomo.slice(0, 3) + '****' + data.sellerMomo.slice(-4);
+
+        card.innerHTML = `
+          <div class="label">Item</div>
+          <div class="value">${data.itemName}</div>
+
+          <div class="label">Amount</div>
+          <div class="amount">GHS ${data.amount.toLocaleString()}</div>
+
+          <hr class="divider">
+
+          <div class="label">Seller</div>
+          <div class="value">${maskedMomo}</div>
+
+          <div class="label">Delivery Window</div>
+          <div class="value">${data.deliveryHours} hours</div>
+
+          <div class="escrow-badge">
+            <p>
+              <strong>Your money is protected.</strong> Verified holds your
+              payment securely. The seller only receives funds
+              <strong>after you confirm delivery</strong>.
+              If something goes wrong, we step in.
+            </p>
+          </div>
+
+          ${alreadyPaid
+            ? `<div class="state-note">✓ ${stateMessages[data.state] || 'Already processed.'}</div>`
+            : `<button class="btn" id="payBtn">Pay GHS ${data.amount.toLocaleString()} Securely</button>`
+          }`;
+
+        document.getElementById('txFooter').style.display = 'block';
+        document.getElementById('txId').textContent =
+          'Transaction ID: ' + data.id.split('-')[0] + '...';
+
+        if (!alreadyPaid) {
+          document.getElementById('payBtn').addEventListener('click', async function () {
+            const buyerEmail = prompt('Enter your email address:');
+            if (!buyerEmail || !buyerEmail.includes('@')) {
+              alert('Please enter a valid email address.');
+              return;
+            }
+
+            const buyerPhone = prompt('Enter your WhatsApp or phone number (e.g. 0241234567):');
+            if (!buyerPhone || buyerPhone.length < 10) {
+              alert('Please enter a valid phone number.');
+              return;
+            }
+
+            this.textContent = 'Initialising payment...';
+            this.classList.add('btn-disabled');
+            this.disabled = true;
+
+            try {
+              const response = await fetch('/transactions/initiate-payment', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({
+                  transactionId: txId,
+                  buyerEmail,
+                  buyerPhone
+                })
+              });
+
+              const payment = await response.json();
+
+              if (payment.paymentUrl) {
+                window.location.href = payment.paymentUrl;
+              } else {
+                alert('Could not initialise payment. Please try again.');
+                this.textContent = `Pay GHS ${data.amount.toLocaleString()} Securely`;
+                this.classList.remove('btn-disabled');
+                this.disabled = false;
+              }
+            } catch (err) {
+              alert('Something went wrong. Please try again.');
+              this.textContent = `Pay GHS ${data.amount.toLocaleString()} Securely`;
+              this.classList.remove('btn-disabled');
+              this.disabled = false;
+            }
+          });
+        }
+
+      } catch (err) {
+        document.getElementById('loading').innerHTML =
+          '<p style="color:#C0392B">Could not load payment details. Check your connection.</p>';
+      }
+    }
+
+    loadPayPage();
+  </script>
+</body>
+</html>

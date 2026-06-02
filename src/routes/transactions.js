@@ -342,7 +342,7 @@ router.patch('/:id/state', async (req, res) => {
 // ── POST /transactions/initiate-payment ─────────────────────────────────────
 // Called by the pay page when buyer clicks Pay
 router.post('/initiate-payment', async (req, res) => {
-  const { transactionId, buyerEmail } = req.body;
+  const { transactionId, buyerEmail, buyerPhone } = req.body;
 
   if (!transactionId || !buyerEmail) {
     return res.status(400).json({ error: 'transactionId and buyerEmail are required' });
@@ -372,8 +372,12 @@ router.post('/initiate-payment', async (req, res) => {
       }
     });
 
-    res.json({ paymentUrl: payment.authorization_url });
+    await prisma.transaction.update({
+      where: { id: transactionId },
+      data:  { buyerPhone: buyerPhone || null }
+    });
 
+    res.json({ paymentUrl: payment.authorization_url });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Could not initialise payment' });
