@@ -2,6 +2,8 @@ const fs   = require('fs');
 const path = require('path');
 
 // ── Define your colour swap ───────────────────────────────────────────────────
+// Option A
+/*
 const SWAPS = [
   { from: '#1B3A6B', to: '#1A7A4A' },  // navy    → primary green
   { from: '#162F55', to: '#145C37' },  // dark navy → dark green
@@ -9,6 +11,15 @@ const SWAPS = [
   { from: '#AABBD4', to: '#A8D5B8' },  // muted navy → muted green
   { from: '#EEF3FA', to: '#EDF7F2' },  // light blue bg → light green bg
   { from: '#F4F7FB', to: '#F4FBF7' },  // page bg → light green tint
+];*/
+// Option B (uncomment to use)
+const SWAPS = [
+  { from: '#1B3A6B', to: '#2E7D52' },  // navy      → emerald green
+  { from: '#162F55', to: '#1B5C3A' },  // dark navy  → dark green
+  { from: '#C8922A', to: '#E8A020' },  // gold       → amber yellow
+  { from: '#AABBD4', to: '#A8C5B0' },  // muted navy → muted green
+  { from: '#EEF3FA', to: '#EDF7F2' },  // light blue → light green
+  { from: '#F4F7FB', to: '#F4FBF7' },  // page bg    → light green tint
 ];
 
 // ── Files to update ───────────────────────────────────────────────────────────
