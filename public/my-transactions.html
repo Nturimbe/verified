@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verified — My Transactions</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #F4FBF7; min-height: 100vh; padding-bottom: 40px; }
+    .header { background: #2E7D52; padding: 18px 20px; text-align: center; }
+    .header h1 { color: #E8A020; font-size: 24px; }
+    .header p  { color: #A8C5B0; font-size: 13px; margin-top: 4px; }
+    .search-card {
+      background: white; margin: 20px 16px 0;
+      border-radius: 12px; padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .search-card h2 { color: #2E7D52; font-size: 16px; margin-bottom: 14px; }
+    input {
+      display: block; width: 100%; padding: 13px 14px;
+      border: 1.5px solid #DDD; border-radius: 8px;
+      font-size: 15px; color: #2E7D52; margin-bottom: 12px; outline: none;
+    }
+    input:focus { border-color: #2E7D52; }
+    .btn {
+      display: block; width: 100%; padding: 14px;
+      background: #2E7D52; color: white; border: none;
+      border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer;
+    }
+    .btn:active { opacity: 0.85; }
+    .tx-card {
+      background: white; margin: 12px 16px 0;
+      border-radius: 10px; padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+      border-left: 4px solid #2E7D52;
+    }
+    .tx-card.DISPUTED  { border-left-color: #C0392B; }
+    .tx-card.RESOLVED  { border-left-color: #A8C5B0; opacity: 0.8; }
+    .tx-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .tx-item   { font-size: 15px; font-weight: bold; color: #2E7D52; }
+    .tx-amount { font-size: 17px; font-weight: bold; color: #E8A020; }
+    .tx-meta   { font-size: 12px; color: #888; margin-top: 4px; }
+    .tx-state  {
+      display: inline-block; padding: 3px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: bold; margin-top: 8px;
+    }
+    .state-CREATED    { background: #EDF7F2; color: #2E7D52; }
+    .state-FUNDED     { background: #FFF8E6; color: #E8A020; }
+    .state-DISPATCHED { background: #E6F0FF; color: #1B5C3A; }
+    .state-CONFIRMED  { background: #E8F5EE; color: #2E7D52; }
+    .state-DISPUTED   { background: #FFE8E8; color: #C0392B; }
+    .state-RESOLVED   { background: #F0F0F0; color: #888; }
+    .tx-actions { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .tx-link {
+      font-size: 12px; color: #2E7D52; text-decoration: none;
+      border: 1px solid #2E7D52; padding: 5px 10px; border-radius: 6px;
+    }
+    .empty  { text-align: center; color: #888; padding: 30px 20px; font-size: 14px; }
+    #results { margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>✓ Verified</h1>
+    <p>My Transactions</p>
+  </div>
+
+  <div class="search-card">
+    <h2>Find your transactions</h2>
+    <input type="tel" id="momoInput"
+      placeholder="Enter your MoMo number (e.g. 0551234567)"
+      maxlength="10" />
+    <button class="btn" onclick="loadTransactions()">View My Transactions</button>
+  </div>
+
+  <div id="results"></div>
+
+  <script>
+    async function loadTransactions() {
+      const momo    = document.getElementById('momoInput').value.trim();
+      const results = document.getElementById('results');
+
+      if (!momo || momo.length < 10) {
+        alert('Please enter your 10-digit MoMo number.');
+        return;
+      }
+
+      results.innerHTML = '<div class="empty">Loading...</div>';
+
+      try {
+        const res  = await fetch(`/transactions/seller/${momo}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          results.innerHTML = `<div class="empty">${data.error || 'Could not load transactions.'}</div>`;
+          return;
+        }
+
+        if (data.length === 0) {
+          results.innerHTML = '<div class="empty">No transactions found for this MoMo number.</div>';
+          return;
+        }
+
+        const baseUrl = window.location.origin;
+
+        results.innerHTML = data.map(tx => {
+          const date    = new Date(tx.createdAt).toLocaleDateString('en-GH', {
+            day: 'numeric', month: 'short', year: 'numeric'
+          });
+          const actions = [];
+
+          if (tx.state === 'FUNDED') {
+            actions.push(`<a class="tx-link" href="${baseUrl}/dispatch.html?id=${tx.id}">Dispatch Item</a>`);
+          }
+          if (tx.state === 'DISPATCHED') {
+            actions.push(`<a class="tx-link" href="${baseUrl}/dispatch.html?id=${tx.id}">View Dispatch</a>`);
+          }
+
+          return `
+            <div class="tx-card ${tx.state}">
+              <div class="tx-header">
+                <div class="tx-item">${tx.itemName}</div>
+                <div class="tx-amount">GHS ${tx.amount.toLocaleString()}</div>
+              </div>
+              <div class="tx-meta">${date} · Buyer: ${tx.buyerName || 'Pending'}</div>
+              <span class="tx-state state-${tx.state}">${tx.state}</span>
+              ${actions.length
+                ? `<div class="tx-actions">${actions.join('')}</div>`
+                : ''}
+            </div>`;
+        }).join('');
+
+      } catch (err) {
+        results.innerHTML = '<div class="empty">Could not connect. Check your connection.</div>';
+      }
+    }
+
+    // Allow pressing Enter on the input
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('momoInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') loadTransactions();
+      });
+    });
+  </script>
+</body>
+</html>

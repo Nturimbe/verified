@@ -383,4 +383,128 @@ router.post('/initiate-payment', async (req, res) => {
     res.status(500).json({ error: 'Could not initialise payment' });
   }
 });
+
+// ── POST /transactions/auto-release ─────────────────────────────────────────
+// Called by external cron job every hour
+// Releases funds for DISPATCHED transactions past their delivery window
+router.post('/auto-release', async (req, res) => {
+  // Simple security — require a secret token
+  const { secret } = req.body;
+  if (secret !== process.env.CRON_SECRET) {
+    return res.status(401).json({ error: 'Unauthorised' });
+  }
+
+  try {
+    const now = new Date();
+
+    // Find all DISPATCHED transactions
+    const dispatched = await prisma.transaction.findMany({
+      where: { state: 'DISPATCHED' }
+    });
+
+    const expired = dispatched.filter(tx => {
+      const dispatchedAt = new Date(tx.updatedAt);
+      const windowMs     = tx.deliveryHours * 60 * 60 * 1000;
+      return (now - dispatchedAt) >= windowMs;
+    });
+
+    const results = [];
+
+    for (const tx of expired) {
+      try {
+        // Move to CONFIRMED then RESOLVED
+        await prisma.transaction.update({
+          where: { id: tx.id },
+          data:  { state: 'CONFIRMED' }
+        });
+
+        const verifiedFee  = parseFloat((tx.amount * 0.02).toFixed(2));
+        const sellerAmount = parseFloat((tx.amount - verifiedFee).toFixed(2));
+
+        const { transferToMomo } = require('../services/paystack');
+        const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
+
+        const transferResult = await transferFn({
+          amount:        sellerAmount,
+          momoNumber:    tx.sellerMomo,
+          transactionId: tx.id
+        });
+
+        await recordMovement({
+          transactionId: tx.id,
+          fromAccount:   'VERIFIED_ESCROW',
+          toAccount:     'SELLER_MOMO',
+          amount:        sellerAmount,
+          reference:     transferResult.transfer_code || transferResult.status,
+          note:          'Auto-release: delivery window expired without buyer dispute'
+        });
+
+        await recordMovement({
+          transactionId: tx.id,
+          fromAccount:   'VERIFIED_ESCROW',
+          toAccount:     'VERIFIED_FEES',
+          amount:        verifiedFee,
+          note:          '2% Verified platform fee'
+        });
+
+        await prisma.transaction.update({
+          where: { id: tx.id },
+          data:  { state: 'RESOLVED' }
+        });
+
+        // Notify seller
+        if (tx.sellerMomo) {
+          await sendSMS(
+            tx.sellerMomo,
+            `Verified: Your delivery window has passed with no issues raised. GHS ${sellerAmount} has been released to your MoMo. Transaction complete.`
+          );
+        }
+
+        // Notify buyer
+        if (tx.buyerPhone) {
+          await sendSMS(
+            tx.buyerPhone,
+            `Verified: Your delivery window for "${tx.itemName}" has passed. Payment has been released to the seller. If you have concerns contact us at support@verified.gh`
+          );
+        }
+
+        results.push({ id: tx.id, status: 'released' });
+        console.log(`Auto-released transaction ${tx.id}`);
+
+      } catch (err) {
+        console.error(`Auto-release failed for ${tx.id}:`, err.message);
+        results.push({ id: tx.id, status: 'failed', error: err.message });
+      }
+    }
+
+    res.json({
+      checked:  dispatched.length,
+      released: results.filter(r => r.status === 'released').length,
+      failed:   results.filter(r => r.status === 'failed').length,
+      results
+    });
+
+  } catch (error) {
+    console.error('Auto-release error:', error);
+    res.status(500).json({ error: 'Auto-release failed' });
+  }
+});
+
+// ── GET /transactions/seller/:momo ──────────────────────────────────────────
+// Seller views all their transactions by MoMo number
+router.get('/seller/:momo', async (req, res) => {
+  try {
+    const transactions = await prisma.transaction.findMany({
+      where:   { sellerMomo: req.params.momo },
+      orderBy: { createdAt: 'desc' },
+      include: { ledgerEntries: true }
+    });
+
+    res.json(transactions);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
 module.exports = router;
