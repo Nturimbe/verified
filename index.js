@@ -9,6 +9,7 @@
 
 require('dotenv').config();
 const express      = require('express');
+//const path         = require('path');
 const transactions = require('./src/routes/transactions');
 const pages        = require('./src/routes/pages');
 const disputes = require('./src/routes/disputes');
@@ -19,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.static('public'));
-app.use(Sentry.Handlers.errorHandler());
+//app.use(Sentry.Handlers.errorHandler());
 
 // Routes
 app.use('/transactions', transactions);
