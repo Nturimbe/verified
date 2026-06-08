@@ -4,141 +4,67 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verified — Create Payment Link</title>
-  <div style="text-align:center;padding:10px;background:#1B5C3A;">
-  <a href="/my-transactions.html"
-     style="color:#A8C5B0;font-size:13px;text-decoration:none;">
-    View My Transactions →
-  </a>
-</div>
+  <script src="/nav.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Arial, sans-serif;
-      background: #F4FBF7;
-      min-height: 100vh;
-      padding-bottom: 40px;
-    }
-    .header {
-      background: #1A7A4A;
-      padding: 20px;
-      text-align: center;
-    }
-    .header h1 { color: #F5C518; font-size: 28px; }
-    .header p  { color: #A8D5B8; font-size: 13px; margin-top: 4px; }
+    body { font-family: Arial, sans-serif; background: #F4FBF7; min-height: 100vh; padding-bottom: 40px; }
+    .header { background: #2E7D52; padding: 20px; text-align: center; }
+    .header h1 { color: #E8A020; font-size: 28px; }
+    .header p  { color: #A8C5B0; font-size: 13px; margin-top: 4px; }
     .card {
-      background: white;
-      margin: 20px 16px 0;
-      border-radius: 12px;
-      padding: 20px;
+      background: white; margin: 20px 16px 0;
+      border-radius: 12px; padding: 20px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
-    .card h2 {
-      color: #1A7A4A;
-      font-size: 17px;
-      margin-bottom: 20px;
-    }
+    .card h2 { color: #2E7D52; font-size: 17px; margin-bottom: 20px; }
     label {
-      display: block;
-      font-size: 12px;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 6px;
+      display: block; font-size: 12px; color: #888;
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
     }
     input, select {
-      display: block;
-      width: 100%;
-      padding: 13px 14px;
-      border: 1.5px solid #DDD;
-      border-radius: 8px;
-      font-size: 15px;
-      color: #1A7A4A;
-      margin-bottom: 16px;
-      outline: none;
+      display: block; width: 100%; padding: 13px 14px;
+      border: 1.5px solid #DDD; border-radius: 8px;
+      font-size: 15px; color: #2E7D52; margin-bottom: 16px; outline: none;
     }
-    input:focus, select:focus { border-color: #F5C518; }
+    input:focus, select:focus { border-color: #2E7D52; }
     .btn {
-      display: block;
-      width: 100%;
-      padding: 16px;
-      background: #1A7A4A;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 4px;
+      display: block; width: 100%; padding: 16px;
+      background: #2E7D52; color: white; border: none;
+      border-radius: 8px; font-size: 16px; font-weight: bold;
+      cursor: pointer; margin-top: 4px;
     }
     .btn:active { opacity: 0.85; }
-    .result {
-      display: none;
-      margin-top: 20px;
-    }
+    .result { display: none; margin-top: 20px; }
     .result-card {
-      background: #EDF7F2;
-      border-left: 4px solid #F5C518;
-      border-radius: 0 8px 8px 0;
-      padding: 16px;
+      background: #EDF7F2; border-left: 4px solid #E8A020;
+      border-radius: 0 8px 8px 0; padding: 16px;
     }
     .result-label {
-      font-size: 12px;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-bottom: 8px;
+      font-size: 12px; color: #888; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 8px;
     }
     .link-box {
-      background: white;
-      border: 1.5px solid #DDD;
-      border-radius: 8px;
-      padding: 12px 14px;
-      font-size: 14px;
-      color: #1A7A4A;
-      word-break: break-all;
-      margin-bottom: 12px;
+      background: white; border: 1.5px solid #DDD; border-radius: 8px;
+      padding: 12px 14px; font-size: 14px; color: #2E7D52;
+      word-break: break-all; margin-bottom: 12px;
     }
     .copy-btn {
-      display: block;
-      width: 100%;
-      padding: 14px;
-      background: #F5C518;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
+      display: block; width: 100%; padding: 14px;
+      background: #E8A020; color: white; border: none;
+      border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer;
     }
     .copy-btn:active { opacity: 0.85; }
-    .success-msg {
-      text-align: center;
-      color: #27AE60;
-      font-size: 13px;
-      margin-top: 8px;
-      display: none;
-    }
+    .success-msg { text-align: center; color: #2E7D52; font-size: 13px; margin-top: 8px; display: none; }
     .error-msg {
-      background: #FFF0F0;
-      border: 1px solid #FFB3B3;
-      color: #C0392B;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      margin-top: 12px;
-      display: none;
+      background: #FFF0F0; border: 1px solid #FFB3B3; color: #C0392B;
+      padding: 12px; border-radius: 8px; font-size: 14px;
+      margin-top: 12px; display: none;
     }
-    .spinner {
-      display: none;
-      text-align: center;
-      padding: 10px;
-      color: #888;
-    }
+    .spinner { display: none; text-align: center; padding: 10px; color: #888; }
   </style>
-  //Navigation script for transaction history.
-  <script src="/nav.js"></script>
 </head>
 <body>
+
   <div class="header">
     <h1>✓ Verified</h1>
     <p>Create a secure payment link</p>
@@ -192,7 +118,7 @@
 
       errorMsg.style.display = 'none';
 
-      if (!itemName) { showError('Please enter what you are selling.'); return; }
+      if (!itemName)  { showError('Please enter what you are selling.'); return; }
       if (!amount || parseFloat(amount) <= 0) { showError('Please enter a valid price.'); return; }
       if (!sellerMomo || sellerMomo.length < 10) { showError('Please enter your 10-digit MoMo number.'); return; }
 
@@ -205,10 +131,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             itemName,
-            amount: parseFloat(amount),
+            amount:        parseFloat(amount),
             sellerMomo,
             deliveryHours: parseInt(deliveryHours),
-            buyerEmail: 'pending@verified.gh'
+            buyerEmail:    'pending@verified.gh'
           })
         });
 
@@ -244,16 +170,10 @@
 
     function showError(msg) {
       const el = document.getElementById('errorMsg');
-      el.textContent = msg;
-      el.style.display = 'block';
+      el.textContent    = msg;
+      el.style.display  = 'block';
     }
   </script>
-  //Navigation links to track transaction history.
-  <div style="text-align:center;padding:10px;background:#1B5C3A;">
-  <a href="/my-transactions.html"
-     style="color:#A8C5B0;font-size:13px;text-decoration:none;">
-    View My Transactions →
-  </a>
-</div>
+
 </body>
 </html>
