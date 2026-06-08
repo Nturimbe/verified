@@ -4,12 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verified — Pay Securely</title>
-  <div style="text-align:center;padding:10px;background:#1B5C3A;">
-  <a href="/my-order.html"
-     style="color:#A8C5B0;font-size:13px;text-decoration:none;">
-    Track My Order →
-  </a>
-</div>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -110,6 +105,8 @@
     .legal a { color: #888; margin: 0 8px; }
     #loading { text-align: center; color: #888; padding: 40px; }
   </style>
+//Navigation script for transaction history.
+  <script src="/nav.js"></script>
 </head>
 <body>
 
@@ -200,8 +197,106 @@
 
           ${alreadyPaid
             ? `<div class="state-note">✓ ${stateMessages[data.state] || 'Already processed.'}</div>`
-            : `<button class="btn" id="payBtn">Pay GHS ${data.amount.toLocaleString()} Securely</button>`
+            : `
+    <div id="contactForm" style="margin-top:16px;">
+      <label style="font-size:12px;color:#888;text-transform:uppercase;
+        letter-spacing:1px;display:block;margin-bottom:6px;">
+        Your Email or WhatsApp Number
+      </label>
+      <input type="text" id="contactInput"
+        placeholder="e.g. ama@gmail.com or 0241234567"
+        style="width:100%;padding:13px 14px;border:1.5px solid #ddd;
+        border-radius:8px;font-size:15px;color:#2E7D52;
+        margin-bottom:4px;outline:none;box-sizing:border-box;" />
+      <p id="contactHint" style="font-size:12px;color:#A8C5B0;
+        min-height:18px;margin-bottom:12px;"></p>
+      <button class="btn" id="payBtn">
+        Pay GHS ${data.amount.toLocaleString()} Securely
+      </button>
+    </div>
+  `
           }`;
+
+          if (!alreadyPaid) {
+  const contactInput = document.getElementById('contactInput');
+  const contactHint  = document.getElementById('contactHint');
+
+  // Auto-detect as user types
+  contactInput.addEventListener('input', function () {
+    const val = this.value.trim();
+    if (!val) { contactHint.textContent = ''; return; }
+
+    if (val.includes('@')) {
+      contactHint.textContent = '✓ Email detected — receipt will be sent here';
+      contactHint.style.color = '#2E7D52';
+    } else if (/^[0-9+]/.test(val) && val.replace(/\s/g, '').length >= 9) {
+      contactHint.textContent = '✓ Phone detected — confirmation via WhatsApp/SMS';
+      contactHint.style.color = '#2E7D52';
+    } else {
+      contactHint.textContent = 'Enter a valid email or phone number';
+      contactHint.style.color = '#C0392B';
+    }
+  });
+
+  document.getElementById('payBtn').addEventListener('click', async function () {
+    const contact = contactInput.value.trim();
+
+    if (!contact) {
+      contactHint.textContent = 'Please enter your email or WhatsApp number.';
+      contactHint.style.color = '#C0392B';
+      return;
+    }
+
+    // Determine type
+    const isEmail = contact.includes('@');
+    const isPhone = /^[0+][0-9]{8,14}$/.test(contact.replace(/\s/g, ''));
+
+    if (!isEmail && !isPhone) {
+      contactHint.textContent = 'Please enter a valid email or phone number.';
+      contactHint.style.color = '#C0392B';
+      return;
+    }
+
+    // Build payload
+    const buyerEmail = isEmail
+      ? contact
+      : contact.replace(/\s/g, '').replace(/^\+233/, '0') + '@verified.gh';
+
+    const buyerPhone = isPhone
+      ? contact.replace(/\s/g, '')
+      : null;
+
+    this.textContent = 'Initialising payment...';
+    this.disabled    = true;
+    this.style.background = '#A8C5B0';
+
+    try {
+      const response = await fetch('/transactions/initiate-payment', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ transactionId: txId, buyerEmail, buyerPhone })
+      });
+
+      const payment = await response.json();
+
+      if (payment.paymentUrl) {
+        window.location.href = payment.paymentUrl;
+      } else {
+        contactHint.textContent = 'Could not initialise payment. Please try again.';
+        contactHint.style.color = '#C0392B';
+        this.textContent  = `Pay GHS ${data.amount.toLocaleString()} Securely`;
+        this.disabled     = false;
+        this.style.background = '#E8A020';
+      }
+    } catch (err) {
+      contactHint.textContent = 'Something went wrong. Please try again.';
+      contactHint.style.color = '#C0392B';
+      this.textContent  = `Pay GHS ${data.amount.toLocaleString()} Securely`;
+      this.disabled     = false;
+      this.style.background = '#E8A020';
+    }
+  });
+}
 
         document.getElementById('txFooter').style.display = 'block';
         document.getElementById('txId').textContent =
@@ -262,14 +357,6 @@
     }
 
     loadPayPage();
-  </script>
-  
-  <div style="text-align:center;padding:24px 16px 8px;font-size:12px;color:#888;">
-  <a href="/terms.html" style="color:#888;margin:0 8px;">Terms</a> ·
-  <a href="/privacy.html" style="color:#888;margin:0 8px;">Privacy</a> ·
-  <a href="/dispute-policy.html" style="color:#888;margin:0 8px;">Dispute Policy</a>
-</div>
-
- 
+  </script> 
 </body>
 </html>

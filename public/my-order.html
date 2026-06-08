@@ -53,6 +53,9 @@
     }
     #loading { text-align: center; color: #888; padding: 30px; }
   </style>
+
+  //Navigation script for transaction history.
+  <script src="/nav.js"></script>
 </head>
 <body>
   <div class="header">
@@ -61,121 +64,83 @@
   </div>
 
   <div class="card" id="searchCard">
-    <h2>Find your order</h2>
-    <input type="text" id="txInput"
-      placeholder="Paste your transaction ID or payment link" />
-    <button class="btn" onclick="findOrder()">Find Order</button>
-  </div>
+  <h2>Find your orders</h2>
+  <input type="tel" id="phoneInput"
+    placeholder="Enter your WhatsApp or phone number"
+    maxlength="13" />
+  <button class="btn" onclick="findOrders()">Find My Orders</button>
+</div>
 
-  <div id="orderCard" style="display:none;"></div>
-
+<div id="orderList"></div>
   <script>
-    function extractId(input) {
-      input = input.trim();
-      // If it looks like a URL, extract the ID
-      const urlMatch = input.match(/\/pay\/([a-f0-9-]{36})/);
-      if (urlMatch) return urlMatch[1];
-      // If it looks like a UUID
-      if (/^[a-f0-9-]{36}$/.test(input)) return input;
-      return null;
+   async function findOrders() {
+  const phone = document.getElementById('phoneInput').value.trim();
+  if (!phone || phone.length < 10) {
+    alert('Please enter your phone number.');
+    return;
+  }
+
+  const list = document.getElementById('orderList');
+  list.innerHTML = '<div class="empty">Loading your orders...</div>';
+
+  try {
+    const res  = await fetch(`/transactions/buyer/${encodeURIComponent(phone)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      list.innerHTML = `<div class="empty">${data.error || 'Could not load orders.'}</div>`;
+      return;
     }
 
-    async function findOrder() {
-      const raw  = document.getElementById('txInput').value;
-      const txId = extractId(raw);
-
-      if (!txId) {
-        alert('Please paste your full payment link or transaction ID.');
-        return;
-      }
-
-      document.getElementById('searchCard').innerHTML =
-        '<div id="loading">Loading your order...</div>';
-
-      try {
-        const res  = await fetch(`/transactions/${txId}`);
-        const data = await res.json();
-
-        if (!res.ok || !data.id) {
-          document.getElementById('searchCard').innerHTML =
-            '<div class="card"><p style="color:#C0392B;padding:10px">Order not found. Check your link and try again.</p></div>';
-          return;
-        }
-
-        document.getElementById('searchCard').style.display = 'none';
-
-        const steps = [
-          {
-            label: 'Payment Secured',
-            desc:  'Your payment is held safely in escrow',
-            states: ['FUNDED','DISPATCHED','CONFIRMED','DISPUTED','RESOLVED']
-          },
-          {
-            label: 'Item Dispatched',
-            desc:  'Seller has sent your item',
-            states: ['DISPATCHED','CONFIRMED','RESOLVED']
-          },
-          {
-            label: 'Delivery Confirmed',
-            desc:  'You confirmed receipt — seller paid',
-            states: ['CONFIRMED','RESOLVED']
-          }
-        ];
-
-        const stateOrder = ['CREATED','FUNDED','DISPATCHED','CONFIRMED','RESOLVED'];
-        const currentIdx = stateOrder.indexOf(data.state);
-
-        const timelineHtml = steps.map((step, i) => {
-          const isDisputed = data.state === 'DISPUTED';
-          const isDone     = step.states.includes(data.state) &&
-                             stateOrder.indexOf(step.states[0]) < currentIdx;
-          const isCurrent  = step.states[0] === data.state;
-
-          let dotClass = 'pending';
-          let icon     = (i + 1).toString();
-
-          if (isDisputed && i === 1) {
-            dotClass = 'current'; icon = '⚠';
-          } else if (isDone)    { dotClass = 'done';    icon = '✓'; }
-          else if (isCurrent)   { dotClass = 'current'; icon = '→'; }
-
-          return `
-            <div class="step">
-              <div class="dot ${dotClass}">${icon}</div>
-              <div class="step-text">
-                <strong>${step.label}</strong>
-                <span>${isDisputed && i === 1 ? 'Dispute in progress — funds frozen' : step.desc}</span>
-              </div>
-            </div>`;
-        }).join('');
-
-        let actionHtml = '';
-        if (data.state === 'DISPATCHED') {
-          actionHtml = `
-            <a class="action-btn" href="/confirm.html?id=${data.id}">
-              Confirm Receipt
-            </a>`;
-        }
-
-        const orderCard = document.getElementById('orderCard');
-        orderCard.style.display = 'block';
-        orderCard.innerHTML = `
-          <div class="card">
-            <div class="label">Item</div>
-            <div class="value">${data.itemName}</div>
-            <div class="label">Amount</div>
-            <div class="amount">GHS ${data.amount.toLocaleString()}</div>
-            <div class="timeline" style="margin-top:20px;">
-              ${timelineHtml}
-            </div>
-            ${actionHtml}
-          </div>`;
-
-      } catch (err) {
-        document.getElementById('searchCard').innerHTML =
-          '<div class="card"><p style="color:#C0392B;padding:10px">Could not connect. Check your internet and try again.</p></div>';
-      }
+    if (data.length === 0) {
+      list.innerHTML = '<div class="empty">No orders found for this number.</div>';
+      return;
     }
+
+    const stateLabel = {
+      CREATED:    '⏳ Awaiting payment',
+      FUNDED:     '💰 Paid — awaiting dispatch',
+      DISPATCHED: '🚚 On the way',
+      CONFIRMED:  '✅ Completed',
+      DISPUTED:   '🔒 Dispute in progress',
+      RESOLVED:   '✅ Resolved'
+    };
+
+    list.innerHTML = data.map(tx => {
+      const date = new Date(tx.createdAt).toLocaleDateString('en-GH', {
+        day: 'numeric', month: 'short', year: 'numeric'
+      });
+
+      let action = '';
+      if (tx.state === 'DISPATCHED') {
+        action = `<a class="tx-link" href="/confirm.html?id=${tx.id}">Confirm Receipt →</a>`;
+      }
+
+      return `
+        <div class="tx-card ${tx.state}">
+          <div class="tx-header">
+            <div class="tx-item">${tx.itemName}</div>
+            <div class="tx-amount">GHS ${tx.amount.toLocaleString()}</div>
+          </div>
+          <div class="tx-meta">${date}</div>
+          <span class="tx-state state-${tx.state}">
+            ${stateLabel[tx.state] || tx.state}
+          </span>
+          ${action ? `<div class="tx-actions">${action}</div>` : ''}
+        </div>`;
+    }).join('');
+
+  } catch (err) {
+    list.innerHTML = '<div class="empty">Could not connect. Try again.</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('phoneInput')
+    .addEventListener('keypress', e => {
+      if (e.key === 'Enter') findOrders();
+    });
+});
   </script>
 </body>
 </html>

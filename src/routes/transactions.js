@@ -175,6 +175,34 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// ── GET /transactions/buyer/:phone ──────────────────────────────────────────
+router.get('/buyer/:phone', async (req, res) => {
+  try {
+    let phone = req.params.phone;
+
+    // Normalise — match both 0241234567 and +233241234567
+    const normalised = phone.startsWith('+233')
+      ? '0' + phone.slice(4)
+      : phone;
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        OR: [
+          { buyerPhone: normalised },
+          { buyerPhone: '+233' + normalised.slice(1) }
+        ]
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(transactions);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch orders' });
+  }
+});
+
 // ── PATCH /transactions/:id/state ────────────────────────────────────────────
 
 router.patch('/:id/state', async (req, res) => {
