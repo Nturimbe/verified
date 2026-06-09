@@ -5,7 +5,7 @@ const { transition }     = require('../services/stateMachine');
 const { recordMovement } = require('../services/ledger');
 const { initializePayment, verifyPayment, mockTransfer } = require('../services/paystack');
 const { sendSMS, messages } = require('../services/sms');
-
+const { sendEmail, emailTemplates } = require('../services/email');
 // Use mock transfer until Paystack activates Transfer API
 // Change this to false once Transfer API is live
 const USE_MOCK_TRANSFER = true;
@@ -153,6 +153,16 @@ console.log(`Transaction ${reference} funded via webhook`);
       console.error('Webhook processing error:', err);
     }
   }
+
+  // Email buyer receipt
+if (funded.buyerEmail && !funded.buyerEmail.includes('@verified.gh')) {
+  const tpl = emailTemplates.paymentReceived({
+    itemName:      funded.itemName,
+    amount:        funded.amount,
+    transactionId: funded.id
+  });
+  await sendEmail({ to: funded.buyerEmail, ...tpl });
+}
 });
 
 // ── GET /transactions/:id ────────────────────────────────────────────────────
@@ -287,6 +297,23 @@ router.patch('/:id/state', async (req, res) => {
       }
     }
 
+    if (newState === 'DISPATCHED') {
+  const confirmUrl  = `${baseUrl}/confirm.html?id=${transaction.id}`;
+  const buyerNumber = buyerPhone || transaction.buyerPhone;
+  if (buyerNumber) {
+    await sendSMS(buyerNumber, messages.DISPATCHED(transaction.itemName, confirmUrl));
+  }
+  // Email buyer
+  if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {
+    const tpl = emailTemplates.itemDispatched({
+      itemName:      transaction.itemName,
+      confirmUrl,
+      transactionId: transaction.id
+    });
+    await sendEmail({ to: transaction.buyerEmail, ...tpl });
+  }
+}
+
     if (newState === 'RESOLVED' && transaction.state === 'CONFIRMED') {
       const verifiedFee  = parseFloat((transaction.amount * 0.02).toFixed(2));
       const sellerAmount = parseFloat((transaction.amount - verifiedFee).toFixed(2));
@@ -338,6 +365,14 @@ router.patch('/:id/state', async (req, res) => {
         );
       }
     }
+
+    if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {
+  const tpl = emailTemplates.transactionComplete({
+    itemName: transaction.itemName,
+    amount:   transaction.amount
+  });
+  await sendEmail({ to: transaction.buyerEmail, ...tpl });
+}
 
     // ── Update state in database ─────────────────────────────────────────────
     const updated = await prisma.transaction.update({

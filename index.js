@@ -13,7 +13,9 @@ const express      = require('express');
 const transactions = require('./src/routes/transactions');
 const pages        = require('./src/routes/pages');
 const disputes = require('./src/routes/disputes');
+const adminRoutes = require('./src/routes/admin');
 
+app.use('/admin/api', adminRoutes);
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -29,7 +31,7 @@ app.use('/disputes', disputes);
 
 // Redirect root to seller create page
 app.get('/', (req, res) => {
-  res.redirect('/create.html');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 app.use('/', pages);
 

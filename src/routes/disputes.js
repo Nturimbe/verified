@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const prisma  = require('../db');
 const { sendSMS, messages } = require('../services/sms');
+const { sendEmail, emailTemplates } = require('../services/email');
 
 // ── POST /disputes ───────────────────────────────────────────────────────────
 // Buyer raises a dispute
@@ -77,6 +78,7 @@ router.post('/', async (req, res) => {
         `Reference: ${dispute.id.split('-')[0]}. Our team reviews within 48 hours.`
       );
     }
+    
 
     res.status(201).json({
       message:  'Dispute raised. Funds are frozen.',
