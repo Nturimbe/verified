@@ -243,6 +243,18 @@
       }).then(r => r.json());
     }
 
+    function togglePassword() {
+  const input = document.getElementById('adminPass');
+  const btn   = document.getElementById('eyeBtn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+
     // ── Overview ──────────────────────────────────────────────────────────────
     async function loadOverview() {
       const data = await adminFetch('/admin/api/overview');
@@ -466,18 +478,6 @@
       if (name === 'disputes')     loadDisputes();
       if (name === 'ledger')       loadLedger();
     }
-
-    function togglePassword() {
-  const input = document.getElementById('adminPass');
-  const btn   = document.getElementById('eyeBtn');
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    btn.textContent = '👁';
-  }
-}
   </script>
 </body>
 </html>`
