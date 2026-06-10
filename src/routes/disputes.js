@@ -78,7 +78,22 @@ router.post('/', async (req, res) => {
         `Reference: ${dispute.id.split('-')[0]}. Our team reviews within 48 hours.`
       );
     }
-    
+
+    // Email buyer if they have a real email address
+if (transaction.buyerEmail &&
+    !transaction.buyerEmail.includes('@verified.gh')) {
+  const tpl = emailTemplates.disputeRaised({
+    itemName:  transaction.itemName,
+    disputeId: dispute.id
+  });
+  await sendEmail({ to: transaction.buyerEmail, ...tpl });
+}
+
+res.status(201).json({
+  message:   'Dispute raised. Funds are frozen.',
+  disputeId: dispute.id,
+  deadline:  responseDeadline
+});
 
     res.status(201).json({
       message:  'Dispute raised. Funds are frozen.',
