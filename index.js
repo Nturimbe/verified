@@ -54,6 +54,11 @@ if (process.env.SENTRY_DSN) {
     }
   }
 } */
+
+  // 404 handler — must be last
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+});
 app.listen(PORT, () => {
   console.log(`Verified server running on port ${PORT}`);
 });
