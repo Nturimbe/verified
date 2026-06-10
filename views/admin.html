@@ -1,4 +1,4 @@
-  res.send(`<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -120,16 +120,23 @@
 <body>
 
   <!-- Login screen -->
-  <div class="login-screen" id="loginScreen">
-    <div style="font-size:36px;color:#E8A020;font-family:Georgia,serif;margin-bottom:20px;">✓ Verified</div>
-    <h2>Admin Access</h2>
-    <input type="password" id="adminPass" placeholder="Enter admin password"
-      onkeypress="if(event.key==='Enter')login()" />
-    <button onclick="login()">Sign In</button>
-    <p id="loginErr" style="color:#C0392B;font-size:13px;margin-top:10px;display:none;">
-      Incorrect password.
-    </p>
-  </div>
+  <div style="position:relative;width:100%;max-width:300px;margin-bottom:12px;">
+  <input type="password" id="adminPass"
+    placeholder="Enter admin password"
+    onkeypress="if(event.key==='Enter')login()"
+    style="width:100%;padding:13px 44px 13px 14px;border:1.5px solid #DDD;
+    border-radius:8px;font-size:15px;outline:none;" />
+  <button onclick="togglePassword()"
+    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    background:none;border:none;cursor:pointer;font-size:18px;color:#888;"
+    id="eyeBtn">👁</button>
+</div>
+<button onclick="login()"
+  style="width:100%;max-width:300px;padding:14px;background:#2E7D52;
+  color:white;border:none;border-radius:8px;font-size:15px;
+  font-weight:bold;cursor:pointer;">
+  Sign In
+</button>
 
   <!-- Main app -->
   <div id="mainApp">
@@ -459,6 +466,18 @@
       if (name === 'disputes')     loadDisputes();
       if (name === 'ledger')       loadLedger();
     }
+
+    function togglePassword() {
+  const input = document.getElementById('adminPass');
+  const btn   = document.getElementById('eyeBtn');
+  if (input.type === 'password') {
+    input.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    input.type = 'password';
+    btn.textContent = '👁';
+  }
+}
   </script>
 </body>
 </html>`);
