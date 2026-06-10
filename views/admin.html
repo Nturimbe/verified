@@ -120,29 +120,36 @@
 <body>
 
   <!-- Login screen -->
-   
-<div id="loginScreen" class="login-screen">
+  <div class="login-screen" id="loginScreen">
+    <div style="font-size:36px;color:#E8A020;font-family:Georgia,serif;margin-bottom:20px;">
+      ✓ Verified
+    </div>
+    <h2>Admin Access</h2>
 
-  <h2>Admin Login</h2>
+    <div style="position:relative;width:100%;max-width:300px;margin-bottom:12px;">
+      <input type="password" id="adminPass"
+        placeholder="Enter admin password"
+        onkeypress="if(event.key==='Enter')login()"
+        style="width:100%;padding:13px 44px 13px 14px;border:1.5px solid #DDD;
+        border-radius:8px;font-size:15px;outline:none;" />
+      <button onclick="togglePassword()"
+        style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+        background:none;border:none;cursor:pointer;font-size:18px;color:#888;"
+        id="eyeBtn">👁</button>
+    </div>
 
-  <div style="position:relative;width:100%;max-width:300px;margin-bottom:12px;">
-  <input type="password" id="adminPass"
-    placeholder="Enter admin password"
-    onkeypress="if(event.key==='Enter')login()"
-    style="width:100%;padding:13px 44px 13px 14px;border:1.5px solid #DDD;
-    border-radius:8px;font-size:15px;outline:none;" />
-  <button onclick="togglePassword()"
-    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
-    background:none;border:none;cursor:pointer;font-size:18px;color:#888;"
-    id="eyeBtn">👁</button>
-</div>
-<button onclick="login()"
-  style="width:100%;max-width:300px;padding:14px;background:#2E7D52;
-  color:white;border:none;border-radius:8px;font-size:15px;
-  font-weight:bold;cursor:pointer;">
-  Sign In
-</button>
-</div> 
+    <button onclick="login()"
+      style="width:100%;max-width:300px;padding:14px;background:#2E7D52;
+      color:white;border:none;border-radius:8px;font-size:15px;
+      font-weight:bold;cursor:pointer;">
+      Sign In
+    </button>
+
+    <p id="loginErr"
+      style="color:#C0392B;font-size:13px;margin-top:10px;display:none;">
+      Incorrect password.
+    </p>
+  </div>
 
   <!-- Main app -->
   <div id="mainApp">
@@ -168,12 +175,10 @@
           <div class="stat-card"><div class="num" id="totalVolumeNum">—</div><div class="lbl">Total Volume (GHS)</div></div>
           <div class="stat-card"><div class="num" id="feesNum">—</div><div class="lbl">Est. Fees Earned</div></div>
         </div>
-
         <div class="card">
           <div class="card-title">Transaction States</div>
           <div id="stateBreakdown"><div class="empty">Loading...</div></div>
         </div>
-
         <div class="card">
           <div class="card-title">Recent Transactions</div>
           <div id="recentTx"><div class="empty">Loading...</div></div>
@@ -217,6 +222,18 @@
   <script>
     let adminToken = '';
 
+    function togglePassword() {
+      const input = document.getElementById('adminPass');
+      const btn   = document.getElementById('eyeBtn');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁';
+      }
+    }
+
     function login() {
       const pass = document.getElementById('adminPass').value;
       adminToken = pass;
@@ -229,7 +246,7 @@
           return;
         }
         document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('mainApp').style.display    = 'block';
         loadOverview();
         updateTime();
         setInterval(updateTime, 30000);
@@ -245,23 +262,14 @@
     function adminFetch(url, opts = {}) {
       return fetch(url, {
         ...opts,
-        headers: { 'x-admin-token': adminToken, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+        headers: {
+          'x-admin-token': adminToken,
+          'Content-Type': 'application/json',
+          ...(opts.headers || {})
+        }
       }).then(r => r.json());
     }
 
-    /*function togglePassword() {
-  const input = document.getElementById('adminPass');
-  const btn   = document.getElementById('eyeBtn');
-  if (input.type === 'password') {
-    input.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    input.type = 'password';
-    btn.textContent = '👁';
-  }
-}*/
-
-    // ── Overview ──────────────────────────────────────────────────────────────
     async function loadOverview() {
       const data = await adminFetch('/admin/api/overview');
       renderOverview(data);
@@ -270,8 +278,7 @@
     function renderOverview(data) {
       document.querySelectorAll('.stat-card .num')[0].textContent =
         data.totalTransactions.toLocaleString();
-      document.getElementById('openDisputesNum').textContent =
-        data.openDisputes;
+      document.getElementById('openDisputesNum').textContent = data.openDisputes;
       document.getElementById('totalVolumeNum').textContent =
         'GHS ' + (data.totalVolume || 0).toLocaleString();
       document.getElementById('feesNum').textContent =
@@ -292,13 +299,14 @@
               <div class="tx-item">${tx.itemName}
                 <span class="badge badge-${tx.state}">${tx.state}</span>
               </div>
-              <div class="tx-meta">${tx.sellerMomo} · ${new Date(tx.createdAt).toLocaleDateString()}</div>
+              <div class="tx-meta">
+                ${tx.sellerMomo} · ${new Date(tx.createdAt).toLocaleDateString()}
+              </div>
             </div>
             <div class="tx-amount">GHS ${tx.amount.toLocaleString()}</div>
           </div>`).join('') || '<div class="empty">No transactions yet</div>';
     }
 
-    // ── Transactions ──────────────────────────────────────────────────────────
     async function loadTransactions(state = '') {
       const url  = '/admin/api/transactions' + (state ? '?state=' + state : '');
       const data = await adminFetch(url);
@@ -332,12 +340,11 @@
       loadTransactions(state);
     }
 
-    // ── Disputes ──────────────────────────────────────────────────────────────
     async function loadDisputes(status = 'OPEN') {
       const data = await adminFetch('/admin/api/disputes?status=' + status);
       document.getElementById('disputeList').innerHTML =
         (data || []).map(d => {
-          const tx = d.transaction;
+          const tx       = d.transaction;
           const needsDual = tx.amount >= 500;
           return `
             <div class="dispute-card" id="dcard-${d.id}">
@@ -356,7 +363,8 @@
                 ${d.reason}
               </div>
               ${d.sellerResponse && d.raisedBy !== 'SELLER'
-                ? `<div style="background:#f0fff4;border-radius:6px;padding:10px;font-size:12px;color:#444;margin-bottom:8px;">
+                ? `<div style="background:#f0fff4;border-radius:6px;padding:10px;
+                    font-size:12px;color:#444;margin-bottom:8px;">
                      <strong>Seller response:</strong><br>${d.sellerResponse}
                    </div>` : ''}
               <div style="font-size:12px;color:#555;margin-bottom:8px;">
@@ -387,14 +395,17 @@
                   placeholder="Decision reason (permanently logged)"></textarea>
                 <input id="decided-${d.id}" placeholder="Your admin name" />
                 ${needsDual
-                  ? `<input id="approved-${d.id}" placeholder="Second admin name (required)" />`
-                  : `<input id="approved-${d.id}" placeholder="Second admin name (optional)" />`}
+                  ? `<input id="approved-${d.id}"
+                      placeholder="Second admin name (required)" />`
+                  : `<input id="approved-${d.id}"
+                      placeholder="Second admin name (optional)" />`}
                 <button class="btn-resolve"
                   onclick="resolveDispute('${d.id}', ${tx.amount})">
                   Submit Decision
                 </button>
               </div>` : `
-              <div style="background:#f0fff4;border-radius:6px;padding:10px;font-size:13px;color:#2E7D52;">
+              <div style="background:#f0fff4;border-radius:6px;padding:10px;
+                font-size:13px;color:#2E7D52;">
                 ✓ Resolved: ${d.decision} by ${d.decidedBy}
               </div>`}
             </div>`;
@@ -424,7 +435,12 @@
       const res = await fetch('/disputes/' + disputeId + '/resolve', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ decision, decisionReason: reason, decidedBy, approvedBy })
+        body:    JSON.stringify({
+          decision,
+          decisionReason: reason,
+          decidedBy,
+          approvedBy
+        })
       });
 
       const data = await res.json();
@@ -433,11 +449,10 @@
       const card = document.getElementById('dcard-' + disputeId);
       card.style.opacity = '0.6';
       card.querySelector('.btn-resolve').textContent = '✓ Resolved';
-      card.querySelector('.btn-resolve').disabled = true;
+      card.querySelector('.btn-resolve').disabled    = true;
       setTimeout(() => loadDisputes('OPEN'), 1500);
     }
 
-    // ── Ledger ────────────────────────────────────────────────────────────────
     async function loadLedger() {
       const data = await adminFetch('/admin/api/reconcile');
       document.getElementById('reconcileResult').innerHTML = `
@@ -473,10 +488,11 @@
           </div>`}`;
     }
 
-    // ── Tab switching ─────────────────────────────────────────────────────────
     function switchTab(name) {
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.section-tab').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-tab')
+        .forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.section-tab')
+        .forEach(s => s.classList.remove('active'));
       event.target.classList.add('active');
       document.getElementById('tab-' + name).classList.add('active');
 
@@ -486,4 +502,4 @@
     }
   </script>
 </body>
-</html>`
+</html>
