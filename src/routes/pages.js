@@ -9,8 +9,8 @@ router.get('/pay/:id', (req, res) => {
 
 // ── Admin dashboard ───────────────────────────────────────────────────────────
 // Served from views/ — NOT public/ — so it cannot be accessed directly by URL
-router.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../views/admin.html'));
-});
+//router.get('/admin', (req, res) => {
+  //res.sendFile(path.join(__dirname, '../../views/admin.html'));
+//});
 
 module.exports = router;
