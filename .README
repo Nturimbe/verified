@@ -208,7 +208,15 @@ verified/
 │   ├── create.html      — Seller: generate a payment link
 │   ├── dispatch.html    — Seller: mark item as dispatched
 │   ├── confirm.html     — Buyer: confirm receipt or raise dispute
-│   └── admin.html       — Admin: view and resolve open disputes
+│   └ admin.html       — Admin: view and resolve open disputes
+│   ├── index.html           — Landing page
+│   ├── how-it-works.html    — Seller and buyer onboarding
+│   ├── my-transactions.html — Seller transaction history
+│   ├── my-order.html        — Buyer order tracking
+│   ├── 404.html             — Not found page
+│   ├── terms.html           — Terms of Service
+│   ├── privacy.html         — Privacy Policy
+│   └── dispute-policy.html  — Dispute Policy       
 ├── src/
 │   ├── routes/
 │   │   ├── transactions.js  — All transaction endpoints + webhook handler
@@ -319,6 +327,21 @@ The live version is deployed on Render. To deploy your own instance:
 - **Sandbox SMS:** SMS reaches real phones only with live Africa's Talking credentials.
 - **Free tier spin-down:** The Render free tier sleeps after 15 minutes of inactivity. First request after sleep takes up to 50 seconds. Upgrade to paid tier for always-on production use.
 
+## Admin Dashboard
+
+The admin dashboard is at `/admin` — it is **not** in the `public/` folder
+and cannot be accessed by guessing a URL directly.
+
+It requires the `ADMIN_SECRET` environment variable to be set.
+Enter the password on the login screen to access:
+
+- Transaction overview and state breakdown
+- All transactions with filters
+- Open and resolved disputes with resolution form
+- Ledger reconciliation
+
+The `ADMIN_SECRET` is set in Render environment variables and is
+never committed to the repository.
 ---
 
 ## Built By

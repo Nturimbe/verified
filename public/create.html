@@ -98,8 +98,15 @@
       <div class="result-label">Your secure payment link</div>
       <div class="result-card">
         <div class="link-box" id="linkDisplay"></div>
-        <button class="copy-btn" onclick="copyLink()">Copy Link to Share</button>
-        <p class="success-msg" id="successMsg">✓ Copied! Share this link with your buyer.</p>
+        <button class="copy-btn" onclick="copyLink()">Copy Link</button>
+<a id="waBtn" href="#" target="_blank"
+  style="display:block;width:100%;padding:14px;margin-top:10px;
+  background:#25D366;color:white;border-radius:8px;
+  font-size:15px;font-weight:bold;text-align:center;
+  text-decoration:none;">
+  Share on WhatsApp
+</a>
+<p class="success-msg" id="successMsg">✓ Copied!</p>
       </div>
     </div>
   </div>
@@ -149,7 +156,11 @@
 
         document.getElementById('linkDisplay').textContent = generatedLink;
         document.getElementById('result').style.display = 'block';
-
+        document.getElementById('waBtn').href =
+  'https://wa.me/?text=' +
+  encodeURIComponent(
+    'Pay securely for *' + itemName + '* (GHS ' + amount + ') via Verified escrow:\n' + generatedLink
+  );
       } catch (err) {
         showError('Could not generate link. Check your connection and try again.');
       } finally {
