@@ -307,6 +307,29 @@
           </div>`).join('') || '<div class="empty">No transactions yet</div>';
     }
 
+    async function adminChangeState(txId) {
+  const newState = document.getElementById('newState-' + txId).value;
+  const reason   = document.getElementById('stateReason-' + txId).value.trim();
+  const msg      = document.getElementById('stateMsg-' + txId);
+
+  if (!newState) { alert('Please select a new state.'); return; }
+  if (!reason)   { alert('A reason is required for all admin state changes.'); return; }
+
+  const res  = await adminFetch('/admin/api/transactions/' + txId + '/state', {
+    method: 'PATCH',
+    body:   JSON.stringify({ newState, reason })
+  });
+
+  if (res.error) {
+    msg.style.color   = '#C0392B';
+    msg.textContent   = 'Error: ' + res.error;
+  } else {
+    msg.style.color   = '#2E7D52';
+    msg.textContent   = '✓ State changed to ' + newState + ' — logged.';
+  }
+  msg.style.display = 'block';
+}
+
     async function loadTransactions(state = '') {
       const url  = '/admin/api/transactions' + (state ? '?state=' + state : '');
       const data = await adminFetch(url);
@@ -331,6 +354,37 @@
                   ⚠ ${tx.disputes.length} dispute(s)
                  </div>` : ''}
           </div>`).join('') || '<div class="empty">No transactions found</div>';
+          <div style="margin-top:12px;border-top:1px solid #EEE;padding-top:12px;">
+  <div style="font-size:12px;font-weight:bold;color:#1B5C3A;margin-bottom:8px;">
+   
+    Admin State Override
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <select id="newState-${tx.id}"
+      style="flex:1;padding:8px;border:1.5px solid #DDD;border-radius:6px;
+      font-size:12px;min-width:120px;">
+      <option value="">— Select new state —</option>
+      <option value="FUNDED">FUNDED</option>
+      <option value="DISPATCHED">DISPATCHED</option>
+      <option value="CONFIRMED">CONFIRMED</option>
+      <option value="DISPUTED">DISPUTED</option>
+      <option value="RESOLVED">RESOLVED</option>
+    </select>
+    <input id="stateReason-${tx.id}"
+      placeholder="Reason (required — logged permanently)"
+      style="flex:2;padding:8px;border:1.5px solid #DDD;border-radius:6px;
+      font-size:12px;min-width:180px;" />
+    <button onclick="adminChangeState('${tx.id}')"
+      style="padding:8px 16px;background:#1B5C3A;color:white;border:none;
+      border-radius:6px;font-size:12px;font-weight:bold;cursor:pointer;
+      white-space:nowrap;">
+      Apply
+    </button>
+  </div>
+  <p id="stateMsg-${tx.id}"
+    style="font-size:11px;margin-top:6px;color:#2E7D52;display:none;">
+  </p>
+</div>
     }
 
     function filterTx(state) {

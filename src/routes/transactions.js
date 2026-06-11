@@ -1,6 +1,7 @@
 const express  = require('express');
 const router   = express.Router();
 const prisma   = require('../db');
+const { sanitizeText } = require('../utils/sanitize');
 const { transition }     = require('../services/stateMachine');
 const { recordMovement } = require('../services/ledger');
 const { initializePayment, verifyPayment, mockTransfer } = require('../services/paystack');
@@ -39,7 +40,18 @@ router.post('/', async (req, res) => {
       state:      transaction.state,
       paymentUrl: `${baseUrl}/pay/${transaction.id}`
     });
+    const cleanItemName = sanitizeText(itemName);
+const cleanMomo     = sanitizeText(sellerMomo);
 
+const transaction = await prisma.transaction.create({
+  data: {
+    itemName:      cleanItemName,
+    amount:        parseFloat(amount),
+    sellerMomo:    cleanMomo,
+    deliveryHours: deliveryHours || 72,
+    state:         'CREATED'
+  }
+});
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create transaction' });
@@ -102,21 +114,39 @@ router.get('/verify/:reference', async (req, res) => {
 
 // ── POST /transactions/webhook ───────────────────────────────────────────────
 // Paystack calls this endpoint directly for payment events
-router.post('/webhook', async (req, res) => {
-  const event = req.body;
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  // Verify signature from Paystack
+  const secret    = process.env.PAYSTACK_SECRET_KEY;
+  const signature = req.headers['x-paystack-signature'];
+  const hash      = require('crypto')
+    .createHmac('sha512', secret)
+    .update(req.body)
+    .digest('hex');
 
-  // Always respond 200 immediately — Paystack retries if you don't
+  if (hash !== signature) {
+    console.warn('[WEBHOOK] Invalid signature — rejected');
+    return res.sendStatus(401);
+  }
+
+  // Parse body after verification
+  const event = JSON.parse(req.body);
+
+  // Always respond 200 immediately
   res.sendStatus(200);
 
   if (event.event === 'charge.success') {
     const reference = event.data.reference;
 
     try {
+      // Idempotency check — skip if already processed
       const transaction = await prisma.transaction.findUnique({
         where: { id: reference }
       });
 
-      if (!transaction || transaction.state !== 'CREATED') return;
+      if (!transaction || transaction.state !== 'CREATED') {
+        console.log(`[WEBHOOK] Skipped ${reference} — state: ${transaction?.state}`);
+        return;
+      }
 
       transition(transaction.state, 'FUNDED');
 
@@ -125,13 +155,33 @@ router.post('/webhook', async (req, res) => {
         fromAccount:   'BUYER_WALLET',
         toAccount:     'VERIFIED_ESCROW',
         amount:        transaction.amount,
-        reference:     reference,
+        reference,
         note:          'Webhook: charge.success received from Paystack'
       });
 
-    await prisma.transaction.update({
-  where: { id: reference },
-  data:  { state: 'FUNDED' }
+      await prisma.transaction.update({
+        where: { id: reference },
+        data:  { state: 'FUNDED' }
+      });
+
+      const funded = await prisma.transaction.findUnique({
+        where: { id: reference }
+      });
+
+      if (funded?.sellerMomo) {
+        const dispatchUrl = `${process.env.BASE_URL}/dispatch.html?id=${funded.id}`;
+        await sendSMS(
+          funded.sellerMomo,
+          messages.FUNDED(funded.itemName, funded.amount, dispatchUrl)
+        );
+      }
+
+      console.log(`[WEBHOOK] Transaction ${reference} funded`);
+
+    } catch (err) {
+      console.error('[WEBHOOK] Processing error:', err);
+    }
+  }
 });
 
 // Notify seller via SMS

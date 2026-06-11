@@ -3,10 +3,12 @@ const router  = express.Router();
 const prisma  = require('../db');
 const { sendSMS, messages } = require('../services/sms');
 const { sendEmail, emailTemplates } = require('../services/email');
+const { sanitizeText } = require('../utils/sanitize');
 
 // ── POST /disputes ───────────────────────────────────────────────────────────
 // Buyer raises a dispute
 router.post('/', async (req, res) => {
+  const cleanReason = sanitizeText(reason);
   const { transactionId, reason, reasonCategory, evidence, raisedBy } = req.body;
 
   if (!transactionId || !reason || !raisedBy) {
