@@ -99,17 +99,27 @@
       justify-content: center; min-height: 100vh; padding: 24px;
       text-align: center;
     }
-    .login-screen h2 { color: #1B5C3A; margin-bottom: 16px; font-family: Georgia,serif; }
-    .login-screen input {
-      width: 100%; max-width: 300px; padding: 13px 14px;
-      border: 1.5px solid #DDD; border-radius: 8px;
-      font-size: 15px; margin-bottom: 12px; outline: none;
-    }
-    .login-screen button {
-      width: 100%; max-width: 300px; padding: 14px;
-      background: #2E7D52; color: white; border: none;
-      border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer;
-    }
+    .login-screen .input-wrapper {
+  display: flex; align-items: center;
+  width: 100%; max-width: 300px;
+  border: 1.5px solid #DDD; border-radius: 8px;
+  margin-bottom: 12px; background: white; overflow: hidden;
+}
+.login-screen .input-wrapper input {
+  flex: 1; padding: 13px 14px; border: none;
+  font-size: 15px; outline: none; background: transparent;
+}
+      .login-btn {
+  width: 100%; max-width: 300px; padding: 14px;
+  background: #2E7D52; color: white; border: none;
+  border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer;
+  margin-top: 4px;
+}
+.eye-btn {
+  padding: 0 14px; background: none; border: none;
+  cursor: pointer; font-size: 18px; color: #888;
+  flex-shrink: 0; line-height: 1;
+}
     .empty { text-align: center; color: #888; padding: 30px; font-size: 14px; }
     .ledger-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; }
     .audit-item { font-size: 11px; color: #666; padding: 3px 0; border-bottom: 1px dashed #EEE; }
@@ -121,38 +131,25 @@
 
   <!-- Login screen -->
   <div class="login-screen" id="loginScreen">
-    <div style="font-size:36px;color:#E8A020;font-family:Georgia,serif;margin-bottom:20px;">
-      ✓ Verified
-    </div>
-    <h2>Admin Access</h2>
-
-    
-    <div style="display:flex;align-items:center;width:100%;max-width:300px;
-  border:1.5px solid #DDD;border-radius:8px;margin-bottom:12px;
-  background:white;">
-  <input type="password" id="adminPass"
-    placeholder="Enter admin password"
-    onkeypress="if(event.key==='Enter')login()"
-    style="flex:1;padding:13px 14px;border:none;font-size:15px;
-    outline:none;background:transparent;border-radius:8px;" />
-  <button onclick="togglePassword()"
-    style="padding:0 14px;background:none;border:none;
-    cursor:pointer;font-size:18px;color:#888;flex-shrink:0;"
-    id="eyeBtn">👁</button>
-</div>
-
-    <button onclick="login()"
-      style="width:100%;max-width:300px;padding:14px;background:#2E7D52;
-      color:white;border:none;border-radius:8px;font-size:15px;
-      font-weight:bold;cursor:pointer;">
-      Sign In
-    </button>
-
-    <p id="loginErr"
-      style="color:#C0392B;font-size:13px;margin-top:10px;display:none;">
-      Incorrect password.
-    </p>
+  <div style="font-size:36px;color:#E8A020;font-family:Georgia,serif;margin-bottom:20px;">
+    ✓ Verified
   </div>
+  <h2>Admin Access</h2>
+
+  <div class="input-wrapper">
+    <input type="password" id="adminPass"
+      placeholder="Enter admin password"
+      onkeypress="if(event.key==='Enter')login()" />
+    <button class="eye-btn" onclick="togglePassword()" id="eyeBtn">👁</button>
+  </div>
+
+  <button class="login-btn" onclick="login()">Sign In</button>
+
+  <p id="loginErr"
+    style="color:#C0392B;font-size:13px;margin-top:10px;display:none;">
+    Incorrect password.
+  </p>
+</div>
 
   <!-- Main app -->
   <div id="mainApp">
