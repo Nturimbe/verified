@@ -4,165 +4,688 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verified — Create Payment Link</title>
+  <script src="/nav.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #F4FBF7; min-height: 100vh; padding-bottom: 40px; }
-    .header { background: #2E7D52; padding: 20px; text-align: center; }
-    .header h1 { color: #E8A020; font-size: 28px; }
-    .header p  { color: #A8C5B0; font-size: 13px; margin-top: 4px; }
-    .card {
-      background: white; margin: 20px 16px 0;
-      border-radius: 12px; padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
+    :root {
+      --green-dark:   #145230;
+      --green-mid:    #1B5C3A;
+      --green-main:   #2E7D52;
+      --green-light:  #EDF7F2;
+      --yellow:       #E8A020;
+      --yellow-light: #FFF8E6;
+      --text-dark:    #1A2E22;
+      --text-mid:     #4A6355;
+      --text-light:   #8AA396;
+      --border:       #D0E4D8;
+      --red:          #DC2626;
+      --white:        #FFFFFF;
+      --bg:           #F2F8F4;
     }
-    .card h2 { color: #2E7D52; font-size: 17px; margin-bottom: 20px; }
-    label {
-      display: block; font-size: 12px; color: #888;
-      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
     }
-    input, select {
-      display: block; width: 100%; padding: 13px 14px;
-      border: 1.5px solid #DDD; border-radius: 8px;
-      font-size: 15px; color: #2E7D52; margin-bottom: 16px; outline: none;
+
+    /* ── Header ── */
+    .header {
+      background: var(--green-dark);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
-    input:focus, select:focus { border-color: #2E7D52; }
-    .btn {
-      display: block; width: 100%; padding: 16px;
-      background: #2E7D52; color: white; border: none;
-      border-radius: 8px; font-size: 16px; font-weight: bold;
-      cursor: pointer; margin-top: 4px;
+    .header-logo { color: var(--yellow); font-size: 22px; font-family: Georgia, serif; }
+
+    /* ── Page layout ── */
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
     }
-    .btn:active { opacity: 0.85; }
-    .result { display: none; margin-top: 20px; }
-    .result-card {
-      background: #EDF7F2; border-left: 4px solid #E8A020;
-      border-radius: 0 8px 8px 0; padding: 16px;
+
+    .page-title {
+      font-size: 13px;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 6px;
+    }
+
+    .page-heading {
+      font-size: 26px;
+      font-family: Georgia, serif;
+      color: var(--text-dark);
+      margin-bottom: 28px;
+    }
+
+    /* ── Split pane ── */
+    .split-pane {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    @media (min-width: 768px) {
+      .split-pane {
+        grid-template-columns: 60fr 40fr;
+        align-items: start;
+      }
+    }
+
+    /* ── Form card ── */
+    .form-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 28px 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    /* ── Floating label fields ── */
+    .field {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .field label {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      color: var(--text-light);
+      pointer-events: none;
+      transition: all 0.2s ease;
+      background: var(--white);
+      padding: 0 4px;
+    }
+
+    .field.has-prefix label {
+      left: 58px;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 18px 14px 8px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      color: var(--text-dark);
+      outline: none;
+      transition: border-color 0.2s;
+      background: var(--white);
+      appearance: none;
+    }
+
+    .field.has-prefix input {
+      padding-left: 52px;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--green-main);
+    }
+
+    .field input:focus + label,
+    .field input:not(:placeholder-shown) + label,
+    .field select:focus + label,
+    .field select:not([value=""]) + label,
+    .field.filled label {
+      top: 10px;
+      transform: none;
+      font-size: 11px;
+      color: var(--green-main);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    /* Currency prefix */
+    .prefix-badge {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--green-main);
+      background: var(--green-light);
+      border-radius: 6px;
+      padding: 4px 8px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Inline hint */
+    .field-hint {
+      font-size: 12px;
+      margin-top: 5px;
+      min-height: 16px;
+      padding-left: 2px;
+      transition: color 0.2s;
+    }
+
+    /* Validation states */
+    .field.valid input   { border-color: var(--green-main); }
+    .field.error input   { border-color: var(--red); }
+    .field.valid .field-hint { color: var(--green-main); }
+    .field.error .field-hint { color: var(--red); }
+
+    /* Select arrow */
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      pointer-events: none;
+      font-size: 14px;
+    }
+
+    /* ── CTA Button ── */
+    .btn-generate {
+      width: 100%;
+      padding: 16px;
+      background: var(--green-main);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.2s, opacity 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-generate:hover   { background: var(--green-mid); }
+    .btn-generate:active  { opacity: 0.85; }
+    .btn-generate:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Trust micro-copy */
+    .trust-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--text-light);
+      line-height: 1.5;
+    }
+    .trust-line span { font-size: 16px; flex-shrink: 0; }
+
+    /* ── Result ── */
+    .result-box {
+      display: none;
+      margin-top: 20px;
+      background: var(--green-light);
+      border-left: 4px solid var(--yellow);
+      border-radius: 0 10px 10px 0;
+      padding: 18px;
     }
     .result-label {
-      font-size: 12px; color: #888; text-transform: uppercase;
-      letter-spacing: 1px; margin-bottom: 8px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-light);
+      margin-bottom: 8px;
     }
-    .link-box {
-      background: white; border: 1.5px solid #DDD; border-radius: 8px;
-      padding: 12px 14px; font-size: 14px; color: #2E7D52;
-      word-break: break-all; margin-bottom: 12px;
+    .result-link {
+      font-size: 13px;
+      color: var(--green-mid);
+      word-break: break-all;
+      margin-bottom: 14px;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      border: 1px solid var(--border);
     }
-    .copy-btn {
-      display: block; width: 100%; padding: 14px;
-      background: #E8A020; color: white; border: none;
-      border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer;
+    .btn-copy {
+      width: 100%;
+      padding: 13px;
+      background: var(--green-main);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 10px;
     }
-    .copy-btn:active { opacity: 0.85; }
-    .success-msg { text-align: center; color: #2E7D52; font-size: 13px; margin-top: 8px; display: none; }
+    .btn-whatsapp {
+      width: 100%;
+      padding: 13px;
+      background: #25D366;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      display: block;
+      text-align: center;
+    }
+    .copy-confirm {
+      text-align: center;
+      font-size: 12px;
+      color: var(--green-main);
+      margin-top: 8px;
+      display: none;
+    }
+
+    /* ── Summary card ── */
+    .summary-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      position: sticky;
+      top: 24px;
+    }
+
+    .summary-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-light);
+      margin-bottom: 18px;
+    }
+
+    .summary-item-name {
+      font-size: 20px;
+      font-family: Georgia, serif;
+      color: var(--text-dark);
+      margin-bottom: 6px;
+      min-height: 28px;
+    }
+
+    .summary-seller {
+      font-size: 13px;
+      color: var(--text-light);
+      margin-bottom: 20px;
+    }
+
+    .summary-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .summary-row .lbl { color: var(--text-mid); }
+    .summary-row .val { color: var(--text-dark); font-weight: 600; }
+    .summary-row.total {
+      margin-top: 4px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .summary-row.total .lbl { font-weight: bold; color: var(--text-dark); }
+    .summary-row.total .val {
+      font-size: 20px;
+      color: var(--green-main);
+      font-family: Georgia, serif;
+    }
+
+    .summary-delivery {
+      background: var(--green-light);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      color: var(--text-mid);
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-placeholder {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+    .summary-placeholder .icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+
+    .powered-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 20px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    /* ── Error message ── */
     .error-msg {
-      background: #FFF0F0; border: 1px solid #FFB3B3; color: #C0392B;
-      padding: 12px; border-radius: 8px; font-size: 14px;
-      margin-top: 12px; display: none;
+      background: #FFF0F0;
+      border: 1px solid #FFBBBB;
+      color: var(--red);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
     }
-    .spinner { display: none; text-align: center; padding: 10px; color: #888; }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <h1>✓ Verified</h1>
-    <p>Create a secure payment link</p>
+    <span class="header-logo">✓ Verified</span>
   </div>
 
-  <div class="card">
-    <h2>New Transaction</h2>
+  <div class="page-wrapper">
+    <p class="page-title">Seller Portal</p>
+    <h1 class="page-heading">Create a Secure Payment Link</h1>
 
-    <label>What are you selling?</label>
-    <input type="text" id="itemName" placeholder="e.g. iPhone 15 Pro, Nike Sneakers" />
+    <div class="split-pane">
 
-    <label>Price (GHS)</label>
-    <input type="number" id="amount" placeholder="e.g. 1500" min="1" />
+      <!-- Left: Form -->
+      <div class="form-card">
 
-   <label>Your MoMo Number</label>
-<input type="tel" id="sellerMomo"
-  placeholder="e.g. 0551234567"
-  maxlength="10"
-  oninput="detectNetwork(this.value)" />
-<p id="networkHint"
-  style="font-size:12px;margin-top:-12px;margin-bottom:12px;
-  min-height:16px;color:#2E7D52;"></p>
+        <!-- Item name -->
+        <div class="field" id="field-item">
+          <input type="text" id="itemName" placeholder=" "
+            maxlength="120"
+            oninput="updateSummary(); validateItem(this)" />
+          <label>What are you selling?</label>
+          <div class="field-hint" id="hint-item"></div>
+        </div>
 
-<label>Price (GHS)</label>
-<input type="number" id="amount"
-  placeholder="e.g. 1500" min="1"
-  oninput="showFeeBreakdown()" />
-<div id="feeBreakdown"
-  style="display:none;background:#EDF7F2;border-radius:8px;
-  padding:12px;margin-top:-12px;margin-bottom:16px;font-size:13px;">
-  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-    <span style="color:#555;">Buyer pays</span>
-    <strong id="buyerPays" style="color:#2E7D52;"></strong>
-  </div>
-  <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-    <span style="color:#555;">Platform fee (2%)</span>
-    <span id="feeAmt" style="color:#888;"></span>
-  </div>
-  <div style="display:flex;justify-content:space-between;border-top:1px solid #C8E6D4;padding-top:6px;margin-top:6px;">
-    <span style="color:#555;font-weight:bold;">You receive</span>
-    <strong id="sellerReceives" style="color:#2E7D52;"></strong>
-  </div>
-</div>
+        <!-- Price -->
+        <div class="field has-prefix" id="field-amount">
+          <div class="prefix-badge">GHS</div>
+          <input type="number" id="amount" placeholder=" "
+            min="1" max="50000" step="0.01"
+            oninput="updateSummary(); validateAmount(this)" />
+          <label>Price</label>
+          <div class="field-hint" id="hint-amount"></div>
+        </div>
 
-    <label>Delivery Window</label>
-    <select id="deliveryHours">
-      <option value="24">Within 24 hours</option>
-      <option value="48" selected>Within 48 hours</option>
-      <option value="72">Within 72 hours</option>
-      <option value="168">Within 7 days</option>
-    </select>
+        <!-- MoMo -->
+        <div class="field" id="field-momo">
+          <input type="tel" id="sellerMomo" placeholder=" "
+            maxlength="10"
+            oninput="formatMomo(this); updateSummary()" />
+          <label>Your MoMo Number</label>
+          <div class="field-hint" id="hint-momo"></div>
+        </div>
 
-    <button class="btn" onclick="generateLink()">Generate Payment Link</button>
+        <!-- Delivery window -->
+        <div class="field select-wrap" id="field-delivery">
+          <select id="deliveryHours" onchange="updateSummary()">
+            <option value="24">Within 24 hours</option>
+            <option value="48" selected>Within 48 hours</option>
+            <option value="72">Within 72 hours</option>
+            <option value="168">Within 7 days</option>
+          </select>
+          <label>Delivery Window</label>
+        </div>
 
-    <div class="spinner" id="spinner">Generating link...</div>
-    <div class="error-msg" id="errorMsg"></div>
+        <button class="btn-generate" id="generateBtn" onclick="generateLink()">
+          <div class="spinner" id="btnSpinner"></div>
+          <span id="btnText">Generate Secure Payment Link</span>
+        </button>
 
-    <div class="result" id="result">
-      <div class="result-label">Your secure payment link</div>
-      <div class="result-card">
-        <div class="link-box" id="linkDisplay"></div>
-        <button class="copy-btn" onclick="copyLink()">Copy Link</button>
-<a id="waBtn" href="#" target="_blank"
-  style="display:block;width:100%;padding:14px;margin-top:10px;
-  background:#25D366;color:white;border-radius:8px;
-  font-size:15px;font-weight:bold;text-align:center;
-  text-decoration:none;">
-  Share on WhatsApp
-</a>
-<p class="success-msg" id="successMsg">✓ Copied!</p>
+        <div class="trust-line">
+          <span>🔒</span>
+          <span>Funds are held securely in escrow and released to you only after the buyer confirms delivery. Secured via Paystack Ghana.</span>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <!-- Result -->
+        <div class="result-box" id="resultBox">
+          <div class="result-label">Your Secure Payment Link</div>
+          <div class="result-link" id="linkDisplay"></div>
+          <button class="btn-copy" onclick="copyLink()">Copy Link</button>
+          <a class="btn-whatsapp" id="waBtn" href="#" target="_blank">
+            Share on WhatsApp
+          </a>
+          <p class="copy-confirm" id="copyConfirm">✓ Copied to clipboard</p>
+        </div>
+
       </div>
+
+      <!-- Right: Live summary card -->
+      <div class="summary-card">
+        <p class="summary-title">Transaction Summary</p>
+
+        <div id="summaryContent">
+          <div class="summary-placeholder">
+            <div class="icon">🧾</div>
+            <p>Your transaction summary will appear here as you fill in the form.</p>
+          </div>
+        </div>
+
+        <div class="powered-badge">
+          🔐 Payments secured via Paystack Ghana
+        </div>
+      </div>
+
     </div>
   </div>
 
   <script>
+    // ── Ghana MoMo network detection ──────────────────────────────────────────
+    const NETWORKS = {
+      '024': 'MTN MoMo',   '054': 'MTN MoMo',
+      '055': 'MTN MoMo',   '059': 'MTN MoMo',
+      '020': 'Vodafone Cash', '050': 'Vodafone Cash',
+      '027': 'AirtelTigo', '057': 'AirtelTigo',
+      '026': 'AirtelTigo', '056': 'AirtelTigo',
+      '028': 'AirtelTigo', '023': 'AirtelTigo'
+    };
+    const MOMO_REGEX = /^0(24|54|55|59|20|50|27|57|26|56|28|23)\d{7}$/;
+
     let generatedLink = '';
 
+    // ── Validation helpers ────────────────────────────────────────────────────
+    function validateItem(input) {
+      const field = document.getElementById('field-item');
+      const hint  = document.getElementById('hint-item');
+      const val   = input.value.trim();
+      if (!val) {
+        field.className = 'field';
+        hint.textContent = '';
+        return false;
+      }
+      if (val.length < 3) {
+        field.className = 'field error';
+        hint.textContent = 'Item name must be at least 3 characters';
+        return false;
+      }
+      field.className = 'field valid filled';
+      hint.textContent = val.length + '/120';
+      return true;
+    }
+
+    function validateAmount(input) {
+      const field = document.getElementById('field-amount');
+      const hint  = document.getElementById('hint-amount');
+      const val   = parseFloat(input.value);
+      if (!val || val <= 0) {
+        field.className = 'field has-prefix';
+        hint.textContent = '';
+        return false;
+      }
+      if (val < 1) {
+        field.className = 'field has-prefix error';
+        hint.textContent = 'Minimum amount is GHS 1';
+        return false;
+      }
+      if (val > 50000) {
+        field.className = 'field has-prefix error';
+        hint.textContent = 'Maximum amount is GHS 50,000';
+        return false;
+      }
+      field.className = 'field has-prefix valid filled';
+      hint.textContent = '';
+      return true;
+    }
+
+    function formatMomo(input) {
+      const field   = document.getElementById('field-momo');
+      const hint    = document.getElementById('hint-momo');
+      let raw = input.value.replace(/\D/g, '').substring(0, 10);
+      input.value   = raw;
+
+      if (raw.length < 3) {
+        field.className = 'field';
+        hint.textContent = '';
+        return false;
+      }
+
+      const prefix  = raw.substring(0, 3);
+      const network = NETWORKS[prefix];
+
+      if (raw.length === 10) {
+        if (MOMO_REGEX.test(raw) && network) {
+          field.className   = 'field valid filled';
+          hint.textContent  = '✓ ' + network + ' detected';
+          hint.style.color  = 'var(--green-main)';
+          return true;
+        } else {
+          field.className   = 'field error filled';
+          hint.textContent  = 'Invalid Ghana MoMo number';
+          hint.style.color  = 'var(--red)';
+          return false;
+        }
+      } else if (network) {
+        field.className  = 'field filled';
+        hint.textContent = network + ' — enter remaining digits';
+        hint.style.color = 'var(--text-light)';
+      } else {
+        field.className  = 'field';
+        hint.textContent = '';
+      }
+      return false;
+    }
+
+    // ── Live summary card ─────────────────────────────────────────────────────
+    function updateSummary() {
+      const item      = document.getElementById('itemName').value.trim();
+      const amount    = parseFloat(document.getElementById('amount').value);
+      const momo      = document.getElementById('sellerMomo').value.trim();
+      const delivery  = document.getElementById('deliveryHours').value;
+      const content   = document.getElementById('summaryContent');
+
+      if (!item && !amount) {
+        content.innerHTML = `
+          <div class="summary-placeholder">
+            <div class="icon">🧾</div>
+            <p>Your transaction summary will appear here as you fill in the form.</p>
+          </div>`;
+        return;
+      }
+
+      const fee          = amount ? parseFloat((amount * 0.02).toFixed(2)) : 0;
+      const sellerNet    = amount ? parseFloat((amount - fee).toFixed(2)) : 0;
+      const deliveryMap  = {
+        '24': '24 hours', '48': '48 hours',
+        '72': '72 hours', '168': '7 days'
+      };
+      const deadline = new Date();
+      deadline.setHours(deadline.getHours() + parseInt(delivery));
+
+      const maskedMomo = momo.length === 10
+        ? momo.slice(0, 3) + '****' + momo.slice(-4)
+        : (momo || '—');
+
+      content.innerHTML = `
+        <div class="summary-item-name">${item || '—'}</div>
+        <div class="summary-seller">Seller: ${maskedMomo}</div>
+
+        <hr class="summary-divider">
+
+        <div class="summary-row">
+          <span class="lbl">Buyer pays</span>
+          <span class="val">${amount ? 'GHS ' + amount.toLocaleString() : '—'}</span>
+        </div>
+        <div class="summary-row">
+          <span class="lbl">Platform fee (2%)</span>
+          <span class="val" style="color:var(--text-light);">
+            ${amount ? '− GHS ' + fee.toLocaleString() : '—'}
+          </span>
+        </div>
+        <div class="summary-row total">
+          <span class="lbl">You receive</span>
+          <span class="val">
+            ${amount ? 'GHS ' + sellerNet.toLocaleString() : '—'}
+          </span>
+        </div>
+
+        <div class="summary-delivery">
+          ⏱ Delivery window: <strong>${deliveryMap[delivery]}</strong>
+          ${amount ? `<br>Auto-releases: ${deadline.toLocaleDateString('en-GH', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}` : ''}
+        </div>`;
+    }
+
+    // ── Generate link ─────────────────────────────────────────────────────────
     async function generateLink() {
       const itemName      = document.getElementById('itemName').value.trim();
       const amount        = document.getElementById('amount').value.trim();
       const sellerMomo    = document.getElementById('sellerMomo').value.trim();
       const deliveryHours = document.getElementById('deliveryHours').value;
       const errorMsg      = document.getElementById('errorMsg');
-      const spinner       = document.getElementById('spinner');
 
       errorMsg.style.display = 'none';
 
-      if (!itemName)  { showError('Please enter what you are selling.'); return; }
-      if (!amount || parseFloat(amount) <= 0) { showError('Please enter a valid price.'); return; }
-      if (!sellerMomo || sellerMomo.length < 10) { showError('Please enter your 10-digit MoMo number.'); return; }
+      const validItem   = validateItem(document.getElementById('itemName'));
+      const validAmount = validateAmount(document.getElementById('amount'));
+      const validMomo   = formatMomo(document.getElementById('sellerMomo'));
 
+      if (!validItem)   { showError('Please enter a valid item name.'); return; }
+      if (!validAmount) { showError('Please enter a valid price between GHS 1 and GHS 50,000.'); return; }
+      if (!validMomo)   { showError('Please enter a valid 10-digit Ghana MoMo number.'); return; }
+
+      // Loading state
+      const btn     = document.getElementById('generateBtn');
+      const spinner = document.getElementById('btnSpinner');
+      const btnText = document.getElementById('btnText');
+      btn.disabled  = true;
       spinner.style.display = 'block';
-      document.querySelector('.btn').disabled = true;
+      btnText.textContent   = 'Securing transaction endpoint...';
 
       try {
         const response = await fetch('/transactions', {
-          method: 'POST',
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body:    JSON.stringify({
             itemName,
             amount:        parseFloat(amount),
             sellerMomo,
@@ -171,79 +694,64 @@
           })
         });
 
-        const NETWORKS = {
-  '024': 'MTN MoMo', '054': 'MTN MoMo', '055': 'MTN MoMo', '059': 'MTN MoMo',
-  '020': 'Vodafone Cash', '050': 'Vodafone Cash',
-  '027': 'AirtelTigo', '057': 'AirtelTigo', '026': 'AirtelTigo',
-  '056': 'AirtelTigo', '028': 'AirtelTigo', '023': 'AirtelTigo'
-};
-
-function detectNetwork(val) {
-  const hint = document.getElementById('networkHint');
-  if (val.length >= 3) {
-    const prefix  = val.substring(0, 3);
-    const network = NETWORKS[prefix];
-    hint.textContent  = network ? '✓ ' + network + ' detected' : '⚠ Unrecognised network prefix';
-    hint.style.color  = network ? '#2E7D52' : '#C0392B';
-  } else {
-    hint.textContent = '';
-  }
-}
-
-function showFeeBreakdown() {
-  const amount = parseFloat(document.getElementById('amount').value);
-  const box    = document.getElementById('feeBreakdown');
-  if (!amount || amount <= 0) { box.style.display = 'none'; return; }
-
-  const fee    = parseFloat((amount * 0.02).toFixed(2));
-  const net    = parseFloat((amount - fee).toFixed(2));
-
-  document.getElementById('buyerPays').textContent     = 'GHS ' + amount.toLocaleString();
-  document.getElementById('feeAmt').textContent        = '− GHS ' + fee.toLocaleString();
-  document.getElementById('sellerReceives').textContent = 'GHS ' + net.toLocaleString();
-  box.style.display = 'block';
-}
-
         const data = await response.json();
 
         if (!response.ok) {
-          showError(data.error || 'Something went wrong. Please try again.');
+          showError(data.error || 'Could not generate link. Please try again. (Error: TXN-CREATE-' + response.status + ')');
           return;
         }
 
-        const baseUrl = window.location.origin;
-        generatedLink = `${baseUrl}/pay/${data.id}`;
-
+        generatedLink = window.location.origin + '/pay/' + data.id;
         document.getElementById('linkDisplay').textContent = generatedLink;
-        document.getElementById('result').style.display = 'block';
+
+        // WhatsApp share
         document.getElementById('waBtn').href =
-  'https://wa.me/?text=' +
-  encodeURIComponent(
-    'Pay securely for *' + itemName + '* (GHS ' + amount + ') via Verified escrow:\n' + generatedLink
-  );
+          'https://wa.me/?text=' + encodeURIComponent(
+            'Pay securely for *' + itemName + '* (GHS ' + parseFloat(amount).toLocaleString() + ') via Verified escrow:\n' + generatedLink
+          );
+
+        document.getElementById('resultBox').style.display = 'block';
+        document.getElementById('resultBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        btnText.textContent = '✓ Link Generated';
+        btn.style.background = '#27AE60';
+
       } catch (err) {
-        showError('Could not generate link. Check your connection and try again.');
+        showError('Connection error. Check your internet and try again. (Error: TXN-NETWORK)');
       } finally {
         spinner.style.display = 'none';
-        document.querySelector('.btn').disabled = false;
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.style.background = '';
+          btnText.textContent = 'Generate Another Link';
+        }, 3000);
       }
     }
 
     function copyLink() {
       navigator.clipboard.writeText(generatedLink).then(() => {
-        document.getElementById('successMsg').style.display = 'block';
-        setTimeout(() => {
-          document.getElementById('successMsg').style.display = 'none';
-        }, 3000);
+        const confirm = document.getElementById('copyConfirm');
+        confirm.style.display = 'block';
+        setTimeout(() => confirm.style.display = 'none', 3000);
       });
     }
 
     function showError(msg) {
       const el = document.getElementById('errorMsg');
-      el.textContent    = msg;
-      el.style.display  = 'block';
+      el.textContent   = msg;
+      el.style.display = 'block';
     }
+
+    // ── Select floating label ─────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      const sel = document.getElementById('deliveryHours');
+      sel.addEventListener('change', () => {
+        sel.parentElement.classList.add('filled');
+      });
+      sel.parentElement.classList.add('filled');
+      updateSummary();
+    });
   </script>
-<script src="/nav.js"></script>
+
 </body>
 </html>
