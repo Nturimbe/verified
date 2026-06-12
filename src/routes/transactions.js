@@ -176,43 +176,21 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
         );
       }
 
+      if (funded?.buyerEmail && !funded.buyerEmail.includes('@verified.gh')) {
+        const tpl = emailTemplates.paymentReceived({
+          itemName:      funded.itemName,
+          amount:        funded.amount,
+          transactionId: funded.id
+        });
+        await sendEmail({ to: funded.buyerEmail, ...tpl });
+      }
+
       console.log(`[WEBHOOK] Transaction ${reference} funded`);
 
     } catch (err) {
       console.error('[WEBHOOK] Processing error:', err);
     }
   }
-});
-
-// Notify seller via SMS
-const funded = await prisma.transaction.findUnique({
-  where: { id: reference }
-});
-
-if (funded && funded.sellerMomo) {
-  const dispatchUrl = `${process.env.BASE_URL}/dispatch.html?id=${funded.id}`;
-  await sendSMS(
-    funded.sellerMomo,
-    messages.FUNDED(funded.itemName, funded.amount, dispatchUrl)
-  );
-}
-
-console.log(`Transaction ${reference} funded via webhook`);
-
-    } catch (err) {
-      console.error('Webhook processing error:', err);
-    }
-  }
-
-  // Email buyer receipt
-if (funded.buyerEmail && !funded.buyerEmail.includes('@verified.gh')) {
-  const tpl = emailTemplates.paymentReceived({
-    itemName:      funded.itemName,
-    amount:        funded.amount,
-    transactionId: funded.id
-  });
-  await sendEmail({ to: funded.buyerEmail, ...tpl });
-}
 });
 
 // ── GET /transactions/:id ────────────────────────────────────────────────────
