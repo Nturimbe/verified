@@ -43,15 +43,6 @@ router.post('/', async (req, res) => {
     const cleanItemName = sanitizeText(itemName);
 const cleanMomo     = sanitizeText(sellerMomo);
 
-transaction = await prisma.transaction.create({
-  data: {
-    itemName:      cleanItemName,
-    amount:        parseFloat(amount),
-    sellerMomo:    cleanMomo,
-    deliveryHours: deliveryHours || 72,
-    state:         'CREATED'
-  }
-});
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create transaction' });
