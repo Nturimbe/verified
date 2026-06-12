@@ -43,7 +43,7 @@ router.post('/', async (req, res) => {
     const cleanItemName = sanitizeText(itemName);
 const cleanMomo     = sanitizeText(sellerMomo);
 
-const transaction = await prisma.transaction.create({
+transaction = await prisma.transaction.create({
   data: {
     itemName:      cleanItemName,
     amount:        parseFloat(amount),
