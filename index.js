@@ -41,15 +41,19 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
+// starts with: app.use(express.json({
+// ends with:   }));
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (req.originalUrl.includes('/transactions/webhook')) {
+      req.rawBody = buf;
+    }
+  }
+}));
 app.use(express.static('public'));
 
 // Routes
 // Raw body for Paystack webhook signature verification — must be before express.json()
-app.use('/transactions/webhook',
-  express.raw({ type: 'application/json' }),
-  require('./src/routes/webhookOnly')
-);
 app.use('/transactions',           transactions);
 app.post('/transactions',          createTxLimit);
 app.post('/transactions/initiate-payment', paymentLimit);

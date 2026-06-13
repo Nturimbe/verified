@@ -43,6 +43,15 @@ router.post('/', async (req, res) => {
     const cleanItemName = sanitizeText(itemName);
 const cleanMomo     = sanitizeText(sellerMomo);
 
+const transaction = await prisma.transaction.create({
+  data: {
+    itemName:      cleanItemName,
+    amount:        parseFloat(amount),
+    sellerMomo:    cleanMomo,
+    deliveryHours: deliveryHours || 72,
+    state:         'CREATED'
+  }
+});
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create transaction' });
@@ -105,7 +114,24 @@ router.get('/verify/:reference', async (req, res) => {
 
 // ── POST /transactions/webhook ───────────────────────────────────────────────
 // Paystack calls this endpoint directly for payment events
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+
+router.post('/webhook', async (req, res) => {
+  const secret    = process.env.PAYSTACK_SECRET_KEY;
+  const signature = req.headers['x-paystack-signature'];
+
+  if (signature && req.rawBody) {
+    const hash = require('crypto')
+      .createHmac('sha512', secret)
+      .update(req.rawBody)
+      .digest('hex');
+
+    if (hash !== signature) {
+      console.warn('[WEBHOOK] Invalid signature — rejected');
+      return res.sendStatus(401);
+    }
+  }
+
+  const event = req.body;
   // Verify signature from Paystack
   const secret    = process.env.PAYSTACK_SECRET_KEY;
   const signature = req.headers['x-paystack-signature'];
