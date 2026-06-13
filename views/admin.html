@@ -233,27 +233,50 @@
         btn.textContent = '👁';
       }
     }
-
     function login() {
-      const pass = document.getElementById('adminPass').value;
-      adminToken = pass;
-      fetch('/admin/api/overview', {
-        headers: { 'x-admin-token': pass }
-      }).then(r => {
-        if (r.status === 401) {
-          document.getElementById('loginErr').style.display = 'block';
-          adminToken = '';
-          return;
-        }
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainApp').style.display    = 'block';
-        loadOverview();
-        updateTime();
-        setInterval(updateTime, 30000);
-        r.json().then(renderOverview);
-      });
-    }
+  const pass = document.getElementById('adminPass').value.trim();
+  const err  = document.getElementById('loginErr');
 
+  if (!pass) {
+    err.textContent   = 'Please enter the admin password.';
+    err.style.display = 'block';
+    return;
+  }
+
+  err.style.display = 'none';
+  adminToken = pass;
+
+  fetch('/admin/api/overview', {
+    headers: { 'x-admin-token': pass }
+  })
+  .then(r => {
+    if (r.status === 401) {
+      err.textContent   = 'Incorrect password.';
+      err.style.display = 'block';
+      adminToken = '';
+      return;
+    }
+    if (!r.ok) {
+      err.textContent   = 'Server error (' + r.status + '). Check Render logs.';
+      err.style.display = 'block';
+      adminToken = '';
+      return;
+    }
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainApp').style.display    = 'block';
+    updateTime();
+    setInterval(updateTime, 30000);
+    return r.json();
+  })
+  .then(data => {
+    if (data) renderOverview(data);
+  })
+  .catch(err => {
+    document.getElementById('loginErr').textContent   = 'Connection failed. Is the server running?';
+    document.getElementById('loginErr').style.display = 'block';
+    adminToken = '';
+  });
+}
     function updateTime() {
       document.getElementById('topTime').textContent =
         new Date().toLocaleString('en-GH');

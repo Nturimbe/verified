@@ -13,6 +13,7 @@ model Transaction {
   sellerMomo    String
   buyerName     String?
   buyerPhone    String?
+  buyerEmail    String?
   deliveryHours Int      @default(72)
   state         String   @default("CREATED")
   createdAt     DateTime @default(now())
