@@ -1,17 +1,16 @@
 const express  = require('express');
 const router   = express.Router();
 const prisma   = require('../db');
-const { sanitizeText } = require('../utils/sanitize');
+const { sanitizeText }   = require('../utils/sanitize');
 const { transition }     = require('../services/stateMachine');
 const { recordMovement } = require('../services/ledger');
 const { initializePayment, verifyPayment, mockTransfer } = require('../services/paystack');
-const { sendSMS, messages } = require('../services/sms');
-const { sendEmail, emailTemplates } = require('../services/email');
-// Use mock transfer until Paystack activates Transfer API
-// Change this to false once Transfer API is live
+const { sendSMS, messages }          = require('../services/sms');
+const { sendEmail, emailTemplates }  = require('../services/email');
+
 const USE_MOCK_TRANSFER = true;
 
-// ── POST /transactions ──────────────────────────────────────────────────────
+// ── POST /transactions ───────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   const { itemName, amount, sellerMomo, deliveryHours } = req.body;
 
@@ -22,11 +21,14 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    const cleanItemName = sanitizeText(itemName);
+    const cleanMomo     = sanitizeText(sellerMomo);
+
     const transaction = await prisma.transaction.create({
       data: {
-        itemName,
+        itemName:      cleanItemName,
         amount:        parseFloat(amount),
-        sellerMomo,
+        sellerMomo:    cleanMomo,
         deliveryHours: deliveryHours || 72,
         state:         'CREATED'
       }
@@ -40,18 +42,7 @@ router.post('/', async (req, res) => {
       state:      transaction.state,
       paymentUrl: `${baseUrl}/pay/${transaction.id}`
     });
-    const cleanItemName = sanitizeText(itemName);
-const cleanMomo     = sanitizeText(sellerMomo);
 
-const transaction = await prisma.transaction.create({
-  data: {
-    itemName:      cleanItemName,
-    amount:        parseFloat(amount),
-    sellerMomo:    cleanMomo,
-    deliveryHours: deliveryHours || 72,
-    state:         'CREATED'
-  }
-});
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create transaction' });
@@ -59,19 +50,16 @@ const transaction = await prisma.transaction.create({
 });
 
 // ── GET /transactions/verify/:reference ─────────────────────────────────────
-// Paystack redirects buyer here after payment
 router.get('/verify/:reference', async (req, res) => {
   const { reference } = req.params;
 
   try {
-    // Verify with Paystack
     const payment = await verifyPayment(reference);
 
     if (payment.status !== 'success') {
       return res.status(400).json({ error: 'Payment not successful', status: payment.status });
     }
 
-    // Find the transaction
     const transaction = await prisma.transaction.findUnique({
       where: { id: reference }
     });
@@ -81,10 +69,9 @@ router.get('/verify/:reference', async (req, res) => {
     }
 
     if (transaction.state !== 'CREATED') {
-      return res.json({ message: 'Transaction already processed', state: transaction.state });
+      return res.redirect(`/confirm.html?id=${transaction.id}`);
     }
 
-    // Move to FUNDED and write ledger
     transition(transaction.state, 'FUNDED');
 
     await recordMovement({
@@ -104,6 +91,7 @@ router.get('/verify/:reference', async (req, res) => {
         buyerPhone: payment.metadata?.phone || null
       }
     });
+
     res.redirect(`/confirm.html?id=${updated.id}`);
 
   } catch (error) {
@@ -113,8 +101,6 @@ router.get('/verify/:reference', async (req, res) => {
 });
 
 // ── POST /transactions/webhook ───────────────────────────────────────────────
-// Paystack calls this endpoint directly for payment events
-
 router.post('/webhook', async (req, res) => {
   const secret    = process.env.PAYSTACK_SECRET_KEY;
   const signature = req.headers['x-paystack-signature'];
@@ -132,30 +118,13 @@ router.post('/webhook', async (req, res) => {
   }
 
   const event = req.body;
-  // Verify signature from Paystack
-  const secret    = process.env.PAYSTACK_SECRET_KEY;
-  const signature = req.headers['x-paystack-signature'];
-  const hash      = require('crypto')
-    .createHmac('sha512', secret)
-    .update(req.body)
-    .digest('hex');
 
-  if (hash !== signature) {
-    console.warn('[WEBHOOK] Invalid signature — rejected');
-    return res.sendStatus(401);
-  }
-
-  // Parse body after verification
-  const event = JSON.parse(req.body);
-
-  // Always respond 200 immediately
   res.sendStatus(200);
 
   if (event.event === 'charge.success') {
     const reference = event.data.reference;
 
     try {
-      // Idempotency check — skip if already processed
       const transaction = await prisma.transaction.findUnique({
         where: { id: reference }
       });
@@ -230,12 +199,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ── GET /transactions/buyer/:phone ──────────────────────────────────────────
+// ── GET /transactions/buyer/:phone ───────────────────────────────────────────
 router.get('/buyer/:phone', async (req, res) => {
   try {
-    let phone = req.params.phone;
-
-    // Normalise — match both 0241234567 and +233241234567
+    const phone      = req.params.phone;
     const normalised = phone.startsWith('+233')
       ? '0' + phone.slice(4)
       : phone;
@@ -259,7 +226,6 @@ router.get('/buyer/:phone', async (req, res) => {
 });
 
 // ── PATCH /transactions/:id/state ────────────────────────────────────────────
-
 router.patch('/:id/state', async (req, res) => {
   const { newState, buyerName, buyerPhone } = req.body;
 
@@ -276,12 +242,9 @@ router.patch('/:id/state', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    // State machine check
     transition(transaction.state, newState);
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-
-    // ── Ledger entries + SMS per state ──────────────────────────────────────
 
     if (newState === 'FUNDED') {
       await recordMovement({
@@ -292,7 +255,6 @@ router.patch('/:id/state', async (req, res) => {
         note:          'Manual: buyer payment received'
       });
 
-      // Notify seller
       if (transaction.sellerMomo) {
         const dispatchUrl = `${baseUrl}/dispatch.html?id=${transaction.id}`;
         await sendSMS(
@@ -303,20 +265,24 @@ router.patch('/:id/state', async (req, res) => {
     }
 
     if (newState === 'DISPATCHED') {
-      const confirmUrl = `${baseUrl}/confirm.html?id=${transaction.id}`;
-
-      // Notify buyer
+      const confirmUrl  = `${baseUrl}/confirm.html?id=${transaction.id}`;
       const buyerNumber = buyerPhone || transaction.buyerPhone;
+
       if (buyerNumber) {
-        await sendSMS(
-          buyerNumber,
-          messages.DISPATCHED(transaction.itemName, confirmUrl)
-        );
+        await sendSMS(buyerNumber, messages.DISPATCHED(transaction.itemName, confirmUrl));
+      }
+
+      if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {
+        const tpl = emailTemplates.itemDispatched({
+          itemName:      transaction.itemName,
+          confirmUrl,
+          transactionId: transaction.id
+        });
+        await sendEmail({ to: transaction.buyerEmail, ...tpl });
       }
     }
 
     if (newState === 'CONFIRMED') {
-      // Notify seller — funds coming
       if (transaction.sellerMomo) {
         await sendSMS(
           transaction.sellerMomo,
@@ -326,38 +292,14 @@ router.patch('/:id/state', async (req, res) => {
     }
 
     if (newState === 'DISPUTED') {
-      // Notify both parties
       if (transaction.sellerMomo) {
-        await sendSMS(
-          transaction.sellerMomo,
-          messages.DISPUTED(transaction.itemName)
-        );
+        await sendSMS(transaction.sellerMomo, messages.DISPUTED(transaction.itemName));
       }
       const buyerNumber = buyerPhone || transaction.buyerPhone;
       if (buyerNumber) {
-        await sendSMS(
-          buyerNumber,
-          messages.DISPUTED(transaction.itemName)
-        );
+        await sendSMS(buyerNumber, messages.DISPUTED(transaction.itemName));
       }
     }
-
-    if (newState === 'DISPATCHED') {
-  const confirmUrl  = `${baseUrl}/confirm.html?id=${transaction.id}`;
-  const buyerNumber = buyerPhone || transaction.buyerPhone;
-  if (buyerNumber) {
-    await sendSMS(buyerNumber, messages.DISPATCHED(transaction.itemName, confirmUrl));
-  }
-  // Email buyer
-  if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {
-    const tpl = emailTemplates.itemDispatched({
-      itemName:      transaction.itemName,
-      confirmUrl,
-      transactionId: transaction.id
-    });
-    await sendEmail({ to: transaction.buyerEmail, ...tpl });
-  }
-}
 
     if (newState === 'RESOLVED' && transaction.state === 'CONFIRMED') {
       const verifiedFee  = parseFloat((transaction.amount * 0.02).toFixed(2));
@@ -391,35 +333,29 @@ router.patch('/:id/state', async (req, res) => {
         note:          '2% Verified platform fee'
       });
 
-      // Notify seller — paid
       if (transaction.sellerMomo) {
         await sendSMS(
           transaction.sellerMomo,
           messages.RESOLVED_SELLER(transaction.itemName, sellerAmount)
         );
       }
-    }
 
-    if (newState === 'RESOLVED' && transaction.state === 'DISPUTED') {
-      // Notify buyer — dispute resolved
-      const buyerNumber = buyerPhone || transaction.buyerPhone;
-      if (buyerNumber) {
-        await sendSMS(
-          buyerNumber,
-          messages.RESOLVED_BUYER(transaction.itemName)
-        );
+      if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {
+        const tpl = emailTemplates.transactionComplete({
+          itemName: transaction.itemName,
+          amount:   sellerAmount
+        });
+        await sendEmail({ to: transaction.buyerEmail, ...tpl });
       }
     }
 
-    if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {
-  const tpl = emailTemplates.transactionComplete({
-    itemName: transaction.itemName,
-    amount:   transaction.amount
-  });
-  await sendEmail({ to: transaction.buyerEmail, ...tpl });
-}
+    if (newState === 'RESOLVED' && transaction.state === 'DISPUTED') {
+      const buyerNumber = buyerPhone || transaction.buyerPhone;
+      if (buyerNumber) {
+        await sendSMS(buyerNumber, messages.RESOLVED_BUYER(transaction.itemName));
+      }
+    }
 
-    // ── Update state in database ─────────────────────────────────────────────
     const updated = await prisma.transaction.update({
       where: { id: req.params.id },
       data: {
@@ -445,10 +381,8 @@ router.patch('/:id/state', async (req, res) => {
     res.status(500).json({ error: 'Failed to update transaction state' });
   }
 });
-    
 
 // ── POST /transactions/initiate-payment ─────────────────────────────────────
-// Called by the pay page when buyer clicks Pay
 router.post('/initiate-payment', async (req, res) => {
   const { transactionId, buyerEmail, buyerPhone } = req.body;
 
@@ -482,10 +416,14 @@ router.post('/initiate-payment', async (req, res) => {
 
     await prisma.transaction.update({
       where: { id: transactionId },
-      data:  { buyerPhone: buyerPhone || null }
+      data:  {
+        buyerPhone: buyerPhone || null,
+        buyerEmail: buyerEmail || null
+      }
     });
 
     res.json({ paymentUrl: payment.authorization_url });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Could not initialise payment' });
@@ -493,19 +431,14 @@ router.post('/initiate-payment', async (req, res) => {
 });
 
 // ── POST /transactions/auto-release ─────────────────────────────────────────
-// Called by external cron job every hour
-// Releases funds for DISPATCHED transactions past their delivery window
 router.post('/auto-release', async (req, res) => {
-  // Simple security — require a secret token
   const { secret } = req.body;
   if (secret !== process.env.CRON_SECRET) {
     return res.status(401).json({ error: 'Unauthorised' });
   }
 
   try {
-    const now = new Date();
-
-    // Find all DISPATCHED transactions
+    const now        = new Date();
     const dispatched = await prisma.transaction.findMany({
       where: { state: 'DISPATCHED' }
     });
@@ -520,11 +453,7 @@ router.post('/auto-release', async (req, res) => {
 
     for (const tx of expired) {
       try {
-        // Move to CONFIRMED then RESOLVED
-        await prisma.transaction.update({
-          where: { id: tx.id },
-          data:  { state: 'CONFIRMED' }
-        });
+        await prisma.transaction.update({ where: { id: tx.id }, data: { state: 'CONFIRMED' } });
 
         const verifiedFee  = parseFloat((tx.amount * 0.02).toFixed(2));
         const sellerAmount = parseFloat((tx.amount - verifiedFee).toFixed(2));
@@ -533,51 +462,33 @@ router.post('/auto-release', async (req, res) => {
         const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
 
         const transferResult = await transferFn({
-          amount:        sellerAmount,
-          momoNumber:    tx.sellerMomo,
-          transactionId: tx.id
+          amount: sellerAmount, momoNumber: tx.sellerMomo, transactionId: tx.id
         });
 
         await recordMovement({
-          transactionId: tx.id,
-          fromAccount:   'VERIFIED_ESCROW',
-          toAccount:     'SELLER_MOMO',
-          amount:        sellerAmount,
-          reference:     transferResult.transfer_code || transferResult.status,
-          note:          'Auto-release: delivery window expired without buyer dispute'
+          transactionId: tx.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'SELLER_MOMO',
+          amount: sellerAmount, reference: transferResult.transfer_code || transferResult.status,
+          note: 'Auto-release: delivery window expired'
         });
 
         await recordMovement({
-          transactionId: tx.id,
-          fromAccount:   'VERIFIED_ESCROW',
-          toAccount:     'VERIFIED_FEES',
-          amount:        verifiedFee,
-          note:          '2% Verified platform fee'
+          transactionId: tx.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'VERIFIED_FEES',
+          amount: verifiedFee, note: '2% Verified platform fee'
         });
 
-        await prisma.transaction.update({
-          where: { id: tx.id },
-          data:  { state: 'RESOLVED' }
-        });
+        await prisma.transaction.update({ where: { id: tx.id }, data: { state: 'RESOLVED' } });
 
-        // Notify seller
         if (tx.sellerMomo) {
-          await sendSMS(
-            tx.sellerMomo,
-            `Verified: Your delivery window has passed with no issues raised. GHS ${sellerAmount} has been released to your MoMo. Transaction complete.`
-          );
+          await sendSMS(tx.sellerMomo,
+            `Verified: Delivery window passed. GHS ${sellerAmount} released to your MoMo.`);
         }
-
-        // Notify buyer
         if (tx.buyerPhone) {
-          await sendSMS(
-            tx.buyerPhone,
-            `Verified: Your delivery window for "${tx.itemName}" has passed. Payment has been released to the seller. If you have concerns contact us at support@verified.gh`
-          );
+          await sendSMS(tx.buyerPhone,
+            `Verified: Delivery window for "${tx.itemName}" passed. Payment released to seller.`);
         }
 
         results.push({ id: tx.id, status: 'released' });
-        console.log(`Auto-released transaction ${tx.id}`);
+        console.log(`Auto-released: ${tx.id}`);
 
       } catch (err) {
         console.error(`Auto-release failed for ${tx.id}:`, err.message);
@@ -598,8 +509,7 @@ router.post('/auto-release', async (req, res) => {
   }
 });
 
-// ── GET /transactions/seller/:momo ──────────────────────────────────────────
-// Seller views all their transactions by MoMo number
+// ── GET /transactions/seller/:momo ───────────────────────────────────────────
 router.get('/seller/:momo', async (req, res) => {
   try {
     const transactions = await prisma.transaction.findMany({
@@ -607,12 +517,11 @@ router.get('/seller/:momo', async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { ledgerEntries: true }
     });
-
     res.json(transactions);
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 });
+
 module.exports = router;
