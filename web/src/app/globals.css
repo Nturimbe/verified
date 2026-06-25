@@ -1,0 +1,45 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background:         hsl(240 20% 97%);
+  --color-foreground:         hsl(150 40% 10%);
+  --color-card:               hsl(0 0% 100%);
+  --color-card-foreground:    hsl(150 40% 10%);
+  --color-primary:            hsl(150 46% 34%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-secondary:          hsl(150 30% 90%);
+  --color-secondary-foreground: hsl(150 46% 20%);
+  --color-muted:              hsl(150 15% 94%);
+  --color-muted-foreground:   hsl(150 15% 45%);
+  --color-accent:             hsl(38 80% 52%);
+  --color-accent-foreground:  hsl(0 0% 100%);
+  --color-destructive:        hsl(0 84% 60%);
+  --color-border:             hsl(150 20% 85%);
+  --color-input:              hsl(150 20% 85%);
+  --color-ring:               hsl(150 46% 34%);
+  --color-brand-darkest:      #145230;
+  --color-brand-dark:         #1B5C3A;
+  --color-brand-main:         #2E7D52;
+  --color-brand-light:        #EDF7F2;
+  --color-brand-amber:        #E8A020;
+  --color-brand-amber-light:  #FFF8E6;
+  --radius:                   0.625rem;
+  --radius-lg:                var(--radius);
+  --radius-md:                calc(var(--radius) - 2px);
+  --radius-sm:                calc(var(--radius) - 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}

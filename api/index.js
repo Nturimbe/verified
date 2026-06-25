@@ -7,7 +7,7 @@ const disputes     = require('./src/routes/disputes');
 const adminRoutes  = require('./src/routes/admin');
 
 const app  = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const rateLimit = require('express-rate-limit');
 
 // Limit transaction creation — 10 per IP per 15 minutes
@@ -50,7 +50,7 @@ app.use(express.json({
     }
   }
 }));
-app.use(express.static('public'));
+
 
 // Routes
 // Raw body for Paystack webhook signature verification — must be before express.json()
@@ -65,7 +65,7 @@ app.use('/admin/api', adminRoutes);
 
 // Root — serve landing page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.json({ message: 'Verified API is running.', version: '0.1.0' });
 });
 
 // Pages router — handles /pay/:id and /admin
@@ -88,10 +88,8 @@ if (process.env.SENTRY_DSN) {
     }
   }
 }
-
-// 404 handler — must be last
 app.use((req, res) => {
-  res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
+  res.status(404).json({ error: 'Not found' });
 });
 
 app.listen(PORT, () => {
