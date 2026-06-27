@@ -1,348 +1,201 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { api, Transaction } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
-import {
-  Package, Clock, Shield, CheckCircle,
-  AlertCircle, AlertTriangle
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 import { PageTransition } from '@/components/ui/page-transition';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Package, ArrowRight, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import { Transaction } from '@/lib/api';
+import { BackButton } from '@/components/ui/back-button';
 
-export default function DispatchPage() {
-  const { id } = useParams<{ id: string }>();
-  const [tx,            setTx]           = useState<Transaction | null>(null);
-  const [loading,       setLoading]       = useState(true);
-  const [dispatching,   setDispatching]   = useState(false);
-  const [dispatched,    setDispatched]    = useState(false);
-  const [showDispute,   setShowDispute]   = useState(false);
-  const [disputeReason, setDisputeReason] = useState('');
-  const [disputing,     setDisputing]     = useState(false);
-  const [disputed,      setDisputed]      = useState(false);
+export default function DispatchLookupPage() {
+  const router = useRouter();
+  const [momo,         setMomo]         = useState('');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading,      setLoading]      = useState(false);
+  const [searched,     setSearched]     = useState(false);
 
-  useEffect(() => {
-    api.getTransaction(id)
-      .then(setTx)
-      .catch(() => toast.error('Transaction not found.'))
-      .finally(() => setLoading(false));
-  }, [id]);
+  const actionable = transactions.filter(
+    tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED'
+  );
+  const others = transactions.filter(
+    tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED'
+  );
 
-  async function handleDispatch() {
-    setDispatching(true);
-    try {
-      await api.updateState(id, 'DISPATCHED');
-      setDispatched(true);
-      toast.success('Dispatch confirmed. Buyer has been notified.');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to confirm dispatch.';
-      toast.error(message);
-    } finally {
-      setDispatching(false);
-    }
-  }
-
-  async function handleDispute() {
-    if (!disputeReason.trim()) {
-      toast.error('Please describe the problem.');
+  async function handleSearch() {
+    if (!momo || momo.length < 10) {
+      toast.error('Enter your 10-digit MoMo number.');
       return;
     }
-    setDisputing(true);
+    setLoading(true);
     try {
-      await api.raiseDispute(id, disputeReason.trim(), 'SELLER');
-      setDisputed(true);
-      toast.success('Dispute raised. Funds are frozen.');
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to raise dispute.';
-      toast.error(message);
+      const data = await api.getSellerTransactions(momo);
+      setTransactions(data);
+      setSearched(true);
+      if (data.length === 0) {
+        toast.info('No transactions found for this number.');
+      }
+    } catch {
+      toast.error('Could not load transactions.');
     } finally {
-      setDisputing(false);
+      setLoading(false);
     }
   }
 
-  if (loading) {
-  return (
-    <PageTransition>
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-brand-main/30
-          border-t-brand-main rounded-full animate-spin" />
-      </div>
-    </PageTransition>
-  );
-}
-
-if (!tx) {
-  return (
-    <PageTransition>
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Transaction Not Found</h2>
-        </div>
-      </div>
-    </PageTransition>
-  );
-}
-
-  if (disputed || tx.state === 'DISPUTED') {
-    return (
-      <PageTransition>
-      <div className="min-h-screen bg-background flex items-center
-        justify-center px-4">
-        <Card className="max-w-md w-full shadow-card">
-          <CardContent className="p-8 text-center">
-            <div className="w-14 h-14 bg-red-50 rounded-full flex items-center
-              justify-center mx-auto mb-4">
-              <AlertTriangle className="w-7 h-7 text-red-500" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              Dispute In Progress
-            </h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              A dispute has been raised on this transaction. Funds are frozen.
-              The Verified team will contact both parties within 48 hours.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      </PageTransition>
-    );
-  }
-
-  if (tx.state === 'CONFIRMED' || tx.state === 'RESOLVED') {
-    return (
-      <PageTransition>
-      <div className="min-h-screen bg-background flex items-center
-        justify-center px-4">
-        <Card className="max-w-md w-full shadow-card">
-          <CardContent className="p-8 text-center">
-            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center
-              justify-center mx-auto mb-4">
-              <CheckCircle className="w-7 h-7 text-brand-main" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              Transaction Complete
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              Buyer confirmed receipt. Your funds have been released to
-              your MoMo.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      </PageTransition>
-    );
-  }
-
-  if (tx.state !== 'FUNDED' && !dispatched && tx.state !== 'DISPATCHED') {
-    return (
-      <PageTransition>
-      <div className="min-h-screen bg-background flex items-center
-        justify-center px-4">
-        <Card className="max-w-md w-full shadow-card">
-          <CardContent className="p-8 text-center">
-            <div className="w-14 h-14 bg-muted rounded-full flex items-center
-              justify-center mx-auto mb-4">
-              <Clock className="w-7 h-7 text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              Not Ready
-            </h2>
-            <p className="text-muted-foreground text-sm">
-              This transaction is not yet funded. Current status: {tx.state}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      </PageTransition>
-    );
-  }
-
-  const isDispatched = dispatched || tx.state === 'DISPATCHED';
+  const STATE_COLORS: Record<string, string> = {
+    CREATED:    'bg-muted text-muted-foreground',
+    FUNDED:     'bg-amber-50 text-amber-700 border-amber-200',
+    DISPATCHED: 'bg-blue-50 text-blue-700 border-blue-200',
+    CONFIRMED:  'bg-green-50 text-brand-main border-green-200',
+    DISPUTED:   'bg-red-50 text-red-600 border-red-200',
+    RESOLVED:   'bg-muted text-muted-foreground',
+  };
 
   return (
     <PageTransition>
-    <div className="min-h-screen bg-background py-10 px-4">
-      <div className="max-w-md mx-auto space-y-4">
+      <div className="min-h-screen bg-background py-10 px-4">
+        <div className="max-w-xl mx-auto">
 
-        <div className="mb-6">
-          <p className="text-xs text-muted-foreground uppercase
-            tracking-wide mb-1">Seller Dispatch</p>
-          <h1 className="text-2xl font-serif font-bold text-foreground">
-            {isDispatched ? 'Item Dispatched' : 'Ready to Dispatch?'}
-          </h1>
-        </div>
+          <div className="mb-8">
+            <BackButton />
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+              Seller Portal
+            </p>
+            <h1 className="text-3xl font-serif font-bold text-foreground">
+              Dispatch a Transaction
+            </h1>
+            <p className="text-muted-foreground text-sm mt-2">
+              Enter your MoMo number to see transactions ready for dispatch.
+            </p>
+          </div>
 
-        <Card className="shadow-card border-border">
-          <CardContent className="p-6 space-y-4">
-            <div>
-              <p className="text-xs text-muted-foreground uppercase
-                tracking-wide mb-1">Item</p>
-              <p className="font-bold text-lg text-foreground">
-                {tx.itemName}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground uppercase
-                tracking-wide mb-1">Amount in Escrow</p>
-              <p className="font-serif text-3xl font-bold text-brand-main">
-                GHS {tx.amount.toLocaleString()}
-              </p>
-            </div>
-            <Separator />
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase
-                  tracking-wide mb-1">Buyer</p>
-                <p className="font-medium text-sm text-foreground">
-                  {tx.buyerName || 'Buyer'}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground uppercase
-                  tracking-wide mb-1">Delivery</p>
-                <div className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                  <p className="font-medium text-sm">
-                    {tx.deliveryHours === 168
-                      ? '7 days' : `${tx.deliveryHours} hrs`}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {!isDispatched ? (
-          <>
-            <div className="bg-brand-light border border-brand-main/20
-              rounded-xl p-4">
+          <Card className="shadow-card border-border mb-6">
+            <CardContent className="p-5 space-y-3">
               <div className="flex gap-2">
-                <Shield className="w-4 h-4 text-brand-main flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-brand-dark">
-                  Once you confirm dispatch, your buyer receives an SMS
-                  with a confirmation link. Funds are released to your
-                  MoMo only after they confirm receipt.
-                </p>
+                <Input
+                  type="tel"
+                  placeholder="Your MoMo number e.g. 0551234567"
+                  maxLength={10}
+                  value={momo}
+                  onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                  className="h-11 text-base border-border focus:border-brand-main flex-1"
+                />
+                <Button
+                  onClick={handleSearch}
+                  disabled={loading}
+                  className="h-11 px-5 bg-brand-main hover:bg-brand-dark text-white border-0"
+                >
+                  {loading
+                    ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    : <Search className="w-4 h-4" />
+                  }
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Actionable transactions — FUNDED or DISPATCHED */}
+          {searched && actionable.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-semibold uppercase tracking-wide
+                text-brand-main mb-3">
+                Needs Action ({actionable.length})
+              </p>
+              <div className="space-y-3">
+                {actionable.map(tx => (
+                  <Card key={tx.id}
+                    className="shadow-card border-brand-main/20 hover:shadow-card-hover transition-shadow cursor-pointer"
+                    onClick={() => router.push(`/dispatch/${tx.id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate">
+                            {tx.itemName}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {new Date(tx.createdAt).toLocaleDateString('en-GH', {
+                              day: 'numeric', month: 'short', year: 'numeric'
+                            })}
+                            {tx.buyerName && ` · ${tx.buyerName}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <div className="text-right">
+                            <p className="font-bold text-brand-main">
+                              GHS {tx.amount.toLocaleString()}
+                            </p>
+                            <Badge className={`text-xs mt-1 border ${STATE_COLORS[tx.state]}`}>
+                              {tx.state}
+                            </Badge>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-brand-main" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
+          )}
 
-            <Button
-              onClick={handleDispatch}
-              disabled={dispatching}
-              className="w-full h-12 bg-brand-main hover:bg-brand-dark
-                text-white font-semibold text-base border-0"
-            >
-              {dispatching ? (
-                <span className="flex items-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/40
-                    border-t-white rounded-full animate-spin" />
-                  Confirming...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  <Package className="w-4 h-4" />
-                  I Have Dispatched This Item
-                </span>
-              )}
-            </Button>
-
-            {!showDispute ? (
-              <p className="text-center text-sm text-muted-foreground">
-                Problem before dispatching?{' '}
-                <button
-                  onClick={() => setShowDispute(true)}
-                  className="text-red-500 font-medium hover:underline"
-                >
-                  Raise a dispute
-                </button>
+          {/* No actionable transactions */}
+          {searched && actionable.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground mb-6">
+              <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-medium">No transactions need action.</p>
+              <p className="text-xs mt-1">
+                All your transactions are either completed or awaiting payment.
               </p>
-            ) : (
-              <Card className="border-red-200">
-                <CardContent className="p-4 space-y-3">
-                  <p className="text-sm font-semibold text-foreground">
-                    Describe the problem
-                  </p>
-                  <Textarea
-                    placeholder="e.g. Buyer asked to cancel, suspicious request..."
-                    value={disputeReason}
-                    onChange={e => setDisputeReason(e.target.value)}
-                    className="resize-none h-20 text-sm"
-                  />
-                  <Button
-                    onClick={handleDispute}
-                    disabled={disputing}
-                    className="w-full h-10 bg-red-500 hover:bg-red-600
-                      text-white border-0 text-sm"
-                  >
-                    {disputing ? 'Submitting...' : 'Submit Dispute'}
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        ) : (
-          <>
-            <Card className="border-brand-main/30 bg-brand-light">
-              <CardContent className="p-5">
-                <div className="flex gap-3">
-                  <CheckCircle className="w-5 h-5 text-brand-main
-                    flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-brand-dark mb-1">
-                      Dispatch Confirmed
-                    </p>
-                    <p className="text-sm text-brand-dark/80">
-                      Your buyer has been notified. Funds will be
-                      released to your MoMo once they confirm receipt.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
+          )}
 
-            {!showDispute ? (
-              <p className="text-center text-sm text-muted-foreground">
-                Item returned or buyer unresponsive?{' '}
-                <button
-                  onClick={() => setShowDispute(true)}
-                  className="text-red-500 font-medium hover:underline"
-                >
-                  Raise a problem
-                </button>
+          {/* Other transactions */}
+          {searched && others.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide
+                text-muted-foreground mb-3">
+                Other Transactions ({others.length})
               </p>
-            ) : !disputed ? (
-              <Card className="border-red-200">
-                <CardContent className="p-4 space-y-3">
-                  <p className="text-sm font-semibold text-foreground">
-                    Describe the problem
-                  </p>
-                  <Textarea
-                    placeholder="e.g. Item returned, buyer unresponsive after 72 hours..."
-                    value={disputeReason}
-                    onChange={e => setDisputeReason(e.target.value)}
-                    className="resize-none h-20 text-sm"
-                  />
-                  <Button
-                    onClick={handleDispute}
-                    disabled={disputing}
-                    className="w-full h-10 bg-red-500 hover:bg-red-600
-                      text-white border-0 text-sm"
-                  >
-                    {disputing ? 'Submitting...' : 'Submit Dispute'}
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : null}
-          </>
-        )}
+              <div className="space-y-2">
+                {others.map(tx => (
+                  <Card key={tx.id} className="shadow-card border-border opacity-60">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground text-sm truncate">
+                            {tx.itemName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(tx.createdAt).toLocaleDateString('en-GH', {
+                              day: 'numeric', month: 'short'
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-semibold text-sm text-foreground">
+                            GHS {tx.amount.toLocaleString()}
+                          </p>
+                          <Badge className={`text-xs mt-1 border ${STATE_COLORS[tx.state]}`}>
+                            {tx.state}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
+        </div>
       </div>
-    </div>
     </PageTransition>
   );
 }

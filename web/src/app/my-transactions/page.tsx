@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Package, ArrowRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageTransition } from '@/components/ui/page-transition';
+import { BackButton } from '@/components/ui/back-button';
 
 const STATE_COLORS: Record<string, string> = {
   CREATED:    'bg-muted text-muted-foreground',
@@ -50,8 +51,10 @@ export default function MyTransactionsPage() {
       <div className="max-w-2xl mx-auto">
 
         <div className="mb-8">
-          <p className="text-xs text-muted-foreground uppercase
-            tracking-wide mb-1">Seller Portal</p>
+          <BackButton />
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+            Seller Portal
+          </p>
           <h1 className="text-3xl font-serif font-bold text-foreground">
             My Transactions
           </h1>

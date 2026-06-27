@@ -13,6 +13,7 @@ import {
   Shield, Clock, AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { BackButton } from '@/components/ui/back-button';
 
 const NETWORKS: Record<string, string> = {
   '024': 'MTN MoMo', '054': 'MTN MoMo',
@@ -117,8 +118,10 @@ export default function CreatePage() {
 
         {/* Page header */}
         <div className="mb-8">
-          <p className="text-xs text-muted-foreground uppercase tracking-widest
-            font-medium mb-1">Seller Portal</p>
+          <BackButton />
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+            Seller Portal
+          </p>
           <h1 className="text-3xl font-serif font-bold text-foreground">
             Create a Secure Payment Link
           </h1>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { PageTransition } from '@/components/ui/page-transition';
+import { BackButton } from '@/components/ui/back-button';
 
 export default function ConfirmPage() {
   const { id } = useParams<{ id: string }>();
@@ -186,13 +187,13 @@ export default function ConfirmPage() {
       <div className="max-w-md mx-auto space-y-4">
 
         <div className="mb-6">
-          <p className="text-xs text-muted-foreground uppercase
-            tracking-wide mb-1">Delivery Confirmation</p>
-          <h1 className="text-2xl font-serif font-bold text-foreground">
-            Did you receive your item?
-          </h1>
+          <BackButton href="/my-order" />
+          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+          Delivery Confirmation
+          </p>
+          <h1 className="text-2xl font-serif font-bold text-foreground"></h1>
         </div>
-
+        
         <Card className="shadow-card border-border">
           <CardContent className="p-6 space-y-4">
             <div>
