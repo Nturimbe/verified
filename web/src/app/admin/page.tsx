@@ -17,6 +17,55 @@ import { toast } from 'sonner';
 
 type Tab = 'overview' | 'transactions' | 'disputes' | 'ledger';
 
+type TxRecord = {
+  id: string;
+  itemName: string;
+  sellerMomo: string;
+  buyerPhone?: string;
+  buyerName?: string;
+  amount: number;
+  state: string;
+  createdAt: string;
+  disputes?: unknown[];
+};
+
+type DisputeRecord = {
+  id: string;
+  raisedBy: string;
+  reason: string;
+  sellerResponse?: string;
+  status: string;
+  decision?: string;
+  decidedBy?: string;
+  createdAt: string;
+  transaction: TxRecord;
+  auditLogs?: AuditLog[];
+};
+
+type AuditLog = {
+  id: string;
+  action: string;
+  performedBy: string;
+  note?: string;
+  createdAt: string;
+};
+
+type OverviewData = {
+  totalTransactions: number;
+  openDisputes: number;
+  totalVolume: number;
+  estimatedFees: number;
+  byState: Record<string, number>;
+  recentTransactions: TxRecord[];
+};
+
+type ReconcileData = {
+  totalEntries: number;
+  totalTransactions: number;
+  balanced: number;
+  unbalanced: { transactionId: string; balance: number }[];
+};
+
 const STATE_COLORS: Record<string, string> = {
   CREATED:    'bg-muted text-muted-foreground',
   FUNDED:     'bg-amber-50 text-amber-700 border-amber-200',
@@ -33,13 +82,12 @@ export default function AdminPage() {
   const [logging,  setLogging]  = useState(false);
   const [tab,      setTab]      = useState<Tab>('overview');
 
-  // Data states
-  const [overview,      setOverview]      = useState<Record<string, unknown> | null>(null);
-  const [transactions,  setTransactions]  = useState<unknown[]>([]);
-  const [disputes,      setDisputes]      = useState<unknown[]>([]);
-  const [reconcile,     setReconcile]     = useState<Record<string, unknown> | null>(null);
-  const [txFilter,      setTxFilter]      = useState('');
-  const [dispFilter,    setDispFilter]    = useState('OPEN');
+  const [overview,     setOverview]     = useState<OverviewData | null>(null);
+  const [transactions, setTransactions] = useState<TxRecord[]>([]);
+  const [disputes,     setDisputes]     = useState<DisputeRecord[]>([]);
+  const [reconcile,    setReconcile]    = useState<ReconcileData | null>(null);
+  const [txFilter,     setTxFilter]     = useState('');
+  const [dispFilter,   setDispFilter]   = useState('OPEN');
 
   async function handleLogin() {
     if (!password) { toast.error('Enter the admin password.'); return; }
@@ -47,7 +95,7 @@ export default function AdminPage() {
     try {
       const data = await adminApi.getOverview(password);
       setToken(password);
-      setOverview(data as Record<string, unknown>);
+      setOverview(data as unknown as OverviewData);
       toast.success('Logged in.');
     } catch {
       toast.error('Incorrect password.');
@@ -61,15 +109,17 @@ export default function AdminPage() {
     try {
       if (t === 'transactions') {
         const data = await adminApi.getTransactions(token, txFilter || undefined);
-        setTransactions((data as { transactions: unknown[] }).transactions || []);
+        setTransactions(
+          ((data as unknown as { transactions: TxRecord[] }).transactions) || []
+        );
       }
       if (t === 'disputes') {
         const data = await adminApi.getDisputes(token, dispFilter);
-        setDisputes(data as unknown[]);
+        setDisputes(data as unknown as DisputeRecord[]);
       }
       if (t === 'ledger') {
         const data = await adminApi.reconcile(token);
-        setReconcile(data as Record<string, unknown>);
+        setReconcile(data as unknown as ReconcileData);
       }
     } catch {
       toast.error('Failed to load data.');
@@ -80,7 +130,9 @@ export default function AdminPage() {
     setTxFilter(state);
     try {
       const data = await adminApi.getTransactions(token, state || undefined);
-      setTransactions((data as { transactions: unknown[] }).transactions || []);
+      setTransactions(
+        ((data as unknown as { transactions: TxRecord[] }).transactions) || []
+      );
     } catch {
       toast.error('Failed to filter.');
     }
@@ -90,13 +142,12 @@ export default function AdminPage() {
     setDispFilter(status);
     try {
       const data = await adminApi.getDisputes(token, status);
-      setDisputes(data as unknown[]);
+      setDisputes(data as unknown as DisputeRecord[]);
     } catch {
       toast.error('Failed to filter.');
     }
   }
 
-  // Login screen
   if (!token) {
     return (
       <div className="min-h-screen bg-brand-darkest flex items-center
@@ -109,28 +160,25 @@ export default function AdminPage() {
               </p>
               <p className="text-sm text-muted-foreground">Admin Access</p>
             </div>
-            <div className="space-y-1.5">
-              <div className="relative">
-                <Input
-                  type={showPw ? 'text' : 'password'}
-                  placeholder="Enter admin password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  className="h-12 pr-10 text-base"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2
-                    text-muted-foreground hover:text-foreground"
-                >
-                  {showPw
-                    ? <EyeOff className="w-4 h-4" />
-                    : <Eye className="w-4 h-4" />
-                  }
-                </button>
-              </div>
+            <div className="relative">
+              <Input
+                type={showPw ? 'text' : 'password'}
+                placeholder="Enter admin password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                className="h-12 pr-10 text-base"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPw(!showPw)}
+                className="absolute right-3 top-1/2 -translate-y-1/2
+                  text-muted-foreground hover:text-foreground"
+              >
+                {showPw
+                  ? <EyeOff className="w-4 h-4" />
+                  : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             <Button
               onClick={handleLogin}
@@ -146,19 +194,16 @@ export default function AdminPage() {
     );
   }
 
-  const ov = overview as Record<string, unknown>;
-
   const tabs = [
-    { key: 'overview',      label: 'Overview',      icon: LayoutDashboard },
-    { key: 'transactions',  label: 'Transactions',   icon: Receipt },
-    { key: 'disputes',      label: 'Disputes',       icon: AlertTriangle },
-    { key: 'ledger',        label: 'Ledger',         icon: Scale },
+    { key: 'overview',     label: 'Overview',     icon: LayoutDashboard },
+    { key: 'transactions', label: 'Transactions',  icon: Receipt },
+    { key: 'disputes',     label: 'Disputes',      icon: AlertTriangle },
+    { key: 'ledger',       label: 'Ledger',        icon: Scale },
   ] as const;
 
   return (
     <div className="min-h-screen bg-background">
 
-      {/* Admin topbar */}
       <div className="bg-brand-darkest border-b border-green-900 px-4 py-3
         flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -175,13 +220,12 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* Tab nav */}
       <div className="border-b border-border bg-background sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 flex overflow-x-auto">
           {tabs.map(t => (
             <button
               key={t.key}
-              onClick={() => switchTab(t.key as Tab)}
+              onClick={() => switchTab(t.key)}
               className={`flex items-center gap-2 px-4 py-4 text-sm
                 font-medium border-b-2 transition-colors whitespace-nowrap
                 ${tab === t.key
@@ -198,31 +242,34 @@ export default function AdminPage() {
 
       <div className="max-w-5xl mx-auto px-4 py-6">
 
-        {/* Overview tab */}
-        {tab === 'overview' && ov && (
+        {/* Overview */}
+        {tab === 'overview' && overview && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
                 {
                   label: 'Total Transactions',
-                  value: String(ov.totalTransactions ?? 0),
+                  value: String(overview.totalTransactions ?? 0),
                   icon: Receipt,
+                  alert: false,
                 },
                 {
                   label: 'Open Disputes',
-                  value: String(ov.openDisputes ?? 0),
+                  value: String(overview.openDisputes ?? 0),
                   icon: AlertTriangle,
-                  alert: Number(ov.openDisputes) > 0,
+                  alert: (overview.openDisputes ?? 0) > 0,
                 },
                 {
                   label: 'Total Volume',
-                  value: `GHS ${Number(ov.totalVolume ?? 0).toLocaleString()}`,
+                  value: `GHS ${Number(overview.totalVolume ?? 0).toLocaleString()}`,
                   icon: TrendingUp,
+                  alert: false,
                 },
                 {
                   label: 'Est. Fees',
-                  value: `GHS ${Number(ov.estimatedFees ?? 0).toLocaleString()}`,
+                  value: `GHS ${Number(overview.estimatedFees ?? 0).toLocaleString()}`,
                   icon: DollarSign,
+                  alert: false,
                 },
               ].map(stat => (
                 <Card key={stat.label} className="shadow-card border-border">
@@ -250,13 +297,11 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {Object.entries(
-                    (ov.byState as Record<string, number>) || {}
-                  ).map(([state, count]) => (
+                  {Object.entries(overview.byState || {}).map(([state, count]) => (
                     <div key={state}
                       className="flex items-center justify-between py-2
                         border-b border-border last:border-0">
-                      <Badge className={`text-xs border ${STATE_COLORS[state]}`}>
+                      <Badge className={`text-xs border ${STATE_COLORS[state] ?? ''}`}>
                         {state}
                       </Badge>
                       <span className="font-semibold text-foreground">
@@ -276,42 +321,37 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {((ov.recentTransactions as unknown[]) || [])
-                    .map((tx: unknown) => {
-                      const t = tx as Record<string, unknown>;
-                      return (
-                        <div key={t.id as string}
-                          className="flex items-center justify-between
-                            py-2 border-b border-border last:border-0">
-                          <div>
-                            <p className="font-medium text-sm text-foreground">
-                              {t.itemName as string}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {t.sellerMomo as string} ·{' '}
-                              {new Date(t.createdAt as string)
-                                .toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-brand-main text-sm">
-                              GHS {Number(t.amount).toLocaleString()}
-                            </p>
-                            <Badge className={`text-xs border
-                              ${STATE_COLORS[t.state as string]}`}>
-                              {t.state as string}
-                            </Badge>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  {(overview.recentTransactions || []).map(tx => (
+                    <div key={tx.id}
+                      className="flex items-center justify-between
+                        py-2 border-b border-border last:border-0">
+                      <div>
+                        <p className="font-medium text-sm text-foreground">
+                          {tx.itemName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {tx.sellerMomo} ·{' '}
+                          {new Date(tx.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-brand-main text-sm">
+                          GHS {tx.amount.toLocaleString()}
+                        </p>
+                        <Badge className={`text-xs border
+                          ${STATE_COLORS[tx.state] ?? ''}`}>
+                          {tx.state}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Transactions tab */}
+        {/* Transactions */}
         {tab === 'transactions' && (
           <div className="space-y-4">
             <div className="flex gap-2 flex-wrap">
@@ -328,10 +368,9 @@ export default function AdminPage() {
                 </button>
               ))}
             </div>
-
             <div className="space-y-3">
-              {(transactions as Record<string, unknown>[]).map(tx => (
-                <AdminTransactionCard key={tx.id as string} tx={tx} token={token} />
+              {transactions.map(tx => (
+                <AdminTransactionCard key={tx.id} tx={tx} token={token} />
               ))}
               {transactions.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
@@ -343,7 +382,7 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* Disputes tab */}
+        {/* Disputes */}
         {tab === 'disputes' && (
           <div className="space-y-4">
             <div className="flex gap-2">
@@ -360,22 +399,21 @@ export default function AdminPage() {
                 </button>
               ))}
             </div>
-
             <div className="space-y-4">
-              {(disputes as Record<string, unknown>[]).map(d => (
-                <AdminDisputeCard key={d.id as string} dispute={d} token={token} />
+              {disputes.map(d => (
+                <AdminDisputeCard key={d.id} dispute={d} token={token} />
               ))}
               {disputes.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">No disputes found. All clear.</p>
+                  <p className="text-sm">No disputes found.</p>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* Ledger tab */}
+        {/* Ledger */}
         {tab === 'ledger' && reconcile && (
           <Card className="shadow-card border-border">
             <CardHeader>
@@ -385,16 +423,11 @@ export default function AdminPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: 'Total entries',        value: reconcile.totalEntries },
-                { label: 'Transactions tracked', value: reconcile.totalTransactions },
-                { label: 'Balanced',             value: reconcile.balanced,     ok: true },
-                {
-                  label: 'Unbalanced',
-                  value: reconcile.unbalanced
-                    ? (reconcile.unbalanced as unknown[]).length : 0,
-                  bad: reconcile.unbalanced
-                    ? (reconcile.unbalanced as unknown[]).length > 0 : false,
-                },
+                { label: 'Total entries',        value: reconcile.totalEntries,        ok: false, bad: false },
+                { label: 'Transactions tracked', value: reconcile.totalTransactions,   ok: false, bad: false },
+                { label: 'Balanced',             value: reconcile.balanced,            ok: true,  bad: false },
+                { label: 'Unbalanced',           value: reconcile.unbalanced.length,   ok: false,
+                  bad: reconcile.unbalanced.length > 0 },
               ].map(row => (
                 <div key={row.label}
                   className="flex justify-between items-center py-2
@@ -410,27 +443,21 @@ export default function AdminPage() {
                 </div>
               ))}
 
-              {reconcile.unbalanced &&
-               (reconcile.unbalanced as unknown[]).length > 0 && (
-                <div className="bg-red-50 border border-red-200
-                  rounded-lg p-4 mt-2">
+              {reconcile.unbalanced.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-2">
                   <p className="text-xs font-semibold text-red-600 mb-2">
                     Unbalanced Transactions
                   </p>
-                  {(reconcile.unbalanced as Record<string, unknown>[]).map(u => (
-                    <p key={u.transactionId as string}
-                      className="text-xs text-red-500">
-                      {(u.transactionId as string).split('-')[0]}...
-                      balance: {String(u.balance)}
+                  {reconcile.unbalanced.map(u => (
+                    <p key={u.transactionId} className="text-xs text-red-500">
+                      {u.transactionId.split('-')[0]}... balance: {u.balance}
                     </p>
                   ))}
                 </div>
               )}
 
-              {reconcile.unbalanced &&
-               (reconcile.unbalanced as unknown[]).length === 0 && (
-                <div className="flex items-center gap-2 text-brand-main
-                  text-sm pt-2">
+              {reconcile.unbalanced.length === 0 && (
+                <div className="flex items-center gap-2 text-brand-main text-sm pt-2">
                   <CheckCircle className="w-4 h-4" />
                   All ledger entries are balanced.
                 </div>
@@ -444,12 +471,7 @@ export default function AdminPage() {
   );
 }
 
-function AdminTransactionCard({
-  tx, token
-}: {
-  tx: Record<string, unknown>;
-  token: string;
-}) {
+function AdminTransactionCard({ tx, token }: { tx: TxRecord; token: string }) {
   const [newState, setNewState] = useState('');
   const [reason,   setReason]   = useState('');
   const [saving,   setSaving]   = useState(false);
@@ -461,7 +483,7 @@ function AdminTransactionCard({
     }
     setSaving(true);
     try {
-      await adminApi.changeTransactionState(token, tx.id as string, newState, reason);
+      await adminApi.changeTransactionState(token, tx.id, newState, reason);
       toast.success(`State updated to ${newState}`);
       setNewState('');
       setReason('');
@@ -477,30 +499,27 @@ function AdminTransactionCard({
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-semibold text-foreground">
-              {tx.itemName as string}
-            </p>
+            <p className="font-semibold text-foreground">{tx.itemName}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Seller: {tx.sellerMomo as string} ·
-              Buyer: {(tx.buyerPhone as string) || 'No phone'} ·
-              {new Date(tx.createdAt as string).toLocaleString()}
+              Seller: {tx.sellerMomo} ·
+              Buyer: {tx.buyerPhone || 'No phone'} ·
+              {new Date(tx.createdAt).toLocaleString()}
             </p>
           </div>
           <div className="text-right flex-shrink-0">
             <p className="font-bold text-brand-main">
-              GHS {Number(tx.amount).toLocaleString()}
+              GHS {tx.amount.toLocaleString()}
             </p>
-            <Badge className={`text-xs border mt-1
-              ${STATE_COLORS[tx.state as string]}`}>
-              {tx.state as string}
+            <Badge className={`text-xs border mt-1 ${STATE_COLORS[tx.state] ?? ''}`}>
+              {tx.state}
             </Badge>
           </div>
         </div>
 
-        {(tx.disputes as unknown[])?.length > 0 && (
+        {(tx.disputes?.length ?? 0) > 0 && (
           <p className="text-xs text-red-500 flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
-            {(tx.disputes as unknown[]).length} dispute(s)
+            {tx.disputes!.length} dispute(s)
           </p>
         )}
 
@@ -543,21 +562,16 @@ function AdminTransactionCard({
   );
 }
 
-function AdminDisputeCard({
-  dispute, token
-}: {
-  dispute: Record<string, unknown>;
-  token: string;
-}) {
-  const [decision,  setDecision]  = useState('');
-  const [reason,    setReason]    = useState('');
-  const [decidedBy, setDecidedBy] = useState('');
-  const [approvedBy,setApprovedBy]= useState('');
-  const [saving,    setSaving]    = useState(false);
-  const [resolved,  setResolved]  = useState(false);
+function AdminDisputeCard({ dispute, token }: { dispute: DisputeRecord; token: string }) {
+  const [decision,   setDecision]   = useState('');
+  const [reason,     setReason]     = useState('');
+  const [decidedBy,  setDecidedBy]  = useState('');
+  const [approvedBy, setApprovedBy] = useState('');
+  const [saving,     setSaving]     = useState(false);
+  const [resolved,   setResolved]   = useState(false);
 
-  const tx       = dispute.transaction as Record<string, unknown>;
-  const needsDual = Number(tx?.amount) >= 500;
+  const tx        = dispute.transaction;
+  const needsDual = tx.amount >= 500;
 
   async function handleResolve() {
     if (!decision || !reason.trim() || !decidedBy.trim()) {
@@ -575,52 +589,46 @@ function AdminDisputeCard({
     setSaving(true);
     try {
       await adminApi.resolveDispute(
-        token, dispute.id as string,
-        decision, reason, decidedBy, approvedBy || undefined
+        token, dispute.id, decision, reason, decidedBy,
+        approvedBy || undefined
       );
       setResolved(true);
       toast.success('Dispute resolved.');
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Failed to resolve.';
-      toast.error(message);
+      toast.error(err instanceof Error ? err.message : 'Failed to resolve.');
     } finally {
       setSaving(false);
     }
   }
 
+  const isResolved = resolved || dispute.status === 'RESOLVED';
+
   return (
     <Card className={`shadow-card border-l-4
-      ${resolved || dispute.status === 'RESOLVED'
-        ? 'border-l-brand-main opacity-70'
-        : 'border-l-red-400'
-      }`}>
+      ${isResolved ? 'border-l-brand-main opacity-70' : 'border-l-red-400'}`}>
       <CardContent className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-semibold text-foreground">
-              {tx?.itemName as string}
-            </p>
+            <p className="font-semibold text-foreground">{tx.itemName}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              ID: {(dispute.id as string).split('-')[0]} ·
-              Raised: {new Date(dispute.createdAt as string).toLocaleString()} ·
-              By: {dispute.raisedBy as string}
+              ID: {dispute.id.split('-')[0]} ·
+              Raised: {new Date(dispute.createdAt).toLocaleString()} ·
+              By: {dispute.raisedBy}
               {needsDual && (
-                <span className="text-amber-600 ml-2">
-                  · Dual approval required
-                </span>
+                <span className="text-amber-600 ml-2">· Dual approval required</span>
               )}
             </p>
           </div>
           <div className="text-right flex-shrink-0">
             <p className="font-bold text-brand-main">
-              GHS {Number(tx?.amount).toLocaleString()}
+              GHS {tx.amount.toLocaleString()}
             </p>
             <Badge className={`text-xs border mt-1
-              ${resolved || dispute.status === 'RESOLVED'
+              ${isResolved
                 ? 'bg-green-50 text-brand-main border-green-200'
                 : 'bg-red-50 text-red-600 border-red-200'
               }`}>
-              {resolved || dispute.status === 'RESOLVED' ? 'RESOLVED' : 'OPEN'}
+              {isResolved ? 'RESOLVED' : 'OPEN'}
             </Badge>
           </div>
         </div>
@@ -629,7 +637,7 @@ function AdminDisputeCard({
           <p className="text-xs font-medium text-muted-foreground mb-1">
             {dispute.raisedBy === 'SELLER' ? 'Seller' : 'Buyer'} reason
           </p>
-          <p className="text-sm text-foreground">{dispute.reason as string}</p>
+          <p className="text-sm text-foreground">{dispute.reason}</p>
         </div>
 
         {dispute.sellerResponse && dispute.raisedBy !== 'SELLER' && (
@@ -637,31 +645,27 @@ function AdminDisputeCard({
             <p className="text-xs font-medium text-muted-foreground mb-1">
               Seller response
             </p>
-            <p className="text-sm text-foreground">
-              {dispute.sellerResponse as string}
-            </p>
+            <p className="text-sm text-foreground">{dispute.sellerResponse}</p>
           </div>
         )}
 
-        {(dispute.auditLogs as unknown[])?.length > 0 && (
+        {(dispute.auditLogs?.length ?? 0) > 0 && (
           <div>
             <p className="text-xs font-semibold text-muted-foreground
               uppercase tracking-wide mb-2">Audit Trail</p>
             <div className="space-y-1">
-              {(dispute.auditLogs as Record<string, unknown>[]).map(log => (
-                <p key={log.id as string}
-                  className="text-xs text-muted-foreground">
-                  [{new Date(log.createdAt as string).toLocaleString()}]{' '}
-                  <strong>{log.action as string}</strong>{' '}
-                  by {log.performedBy as string}
-                  {log.note && ` — ${log.note}`}
+              {dispute.auditLogs!.map(log => (
+                <p key={log.id} className="text-xs text-muted-foreground">
+                  [{new Date(log.createdAt).toLocaleString()}]{' '}
+                  <strong>{log.action}</strong> by {log.performedBy}
+                  {log.note ? ` — ${log.note}` : ''}
                 </p>
               ))}
             </div>
           </div>
         )}
 
-        {!resolved && dispute.status === 'OPEN' && (
+        {!isResolved && (
           <>
             <Separator />
             <div className="space-y-3">
@@ -675,9 +679,7 @@ function AdminDisputeCard({
                         ? 'bg-brand-main text-white border-brand-main'
                         : 'bg-background border-border hover:border-brand-main'
                       }`}>
-                    {d === 'RELEASE_TO_SELLER'
-                      ? 'Release to Seller'
-                      : 'Refund to Buyer'}
+                    {d === 'RELEASE_TO_SELLER' ? 'Release to Seller' : 'Refund to Buyer'}
                   </button>
                 ))}
               </div>
@@ -713,10 +715,10 @@ function AdminDisputeCard({
           </>
         )}
 
-        {(resolved || dispute.status === 'RESOLVED') && (
+        {isResolved && (
           <div className="flex items-center gap-2 text-brand-main text-sm">
             <CheckCircle className="w-4 h-4" />
-            Resolved: {dispute.decision as string} by {dispute.decidedBy as string}
+            Resolved: {dispute.decision ?? ''} by {dispute.decidedBy ?? ''}
           </div>
         )}
       </CardContent>
