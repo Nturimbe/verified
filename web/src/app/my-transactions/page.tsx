@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, ArrowRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageTransition } from '@/components/ui/page-transition';
 
 const STATE_COLORS: Record<string, string> = {
   CREATED:    'bg-muted text-muted-foreground',
@@ -44,6 +45,7 @@ export default function MyTransactionsPage() {
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-2xl mx-auto">
 
@@ -148,5 +150,6 @@ export default function MyTransactionsPage() {
 
       </div>
     </div>
+    </PageTransition>
   );
 }

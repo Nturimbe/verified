@@ -1,3 +1,5 @@
+import { PageTransition } from '@/components/ui/page-transition';
+
 export default function PrivacyPage() {
   const sections = [
     {
@@ -27,6 +29,7 @@ export default function PrivacyPage() {
   ];
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <p className="text-xs text-muted-foreground uppercase tracking-widest
@@ -49,5 +52,6 @@ export default function PrivacyPage() {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 }

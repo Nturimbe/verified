@@ -12,6 +12,7 @@ import {
   AlertCircle, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageTransition } from '@/components/ui/page-transition';
 
 export default function DispatchPage() {
   const { id } = useParams<{ id: string }>();
@@ -64,27 +65,32 @@ export default function DispatchPage() {
   }
 
   if (loading) {
-    return (
+  return (
+    <PageTransition>
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-brand-main/30
           border-t-brand-main rounded-full animate-spin" />
       </div>
-    );
-  }
+    </PageTransition>
+  );
+}
 
-  if (!tx) {
-    return (
+if (!tx) {
+  return (
+    <PageTransition>
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2">Transaction Not Found</h2>
         </div>
       </div>
-    );
-  }
+    </PageTransition>
+  );
+}
 
   if (disputed || tx.state === 'DISPUTED') {
     return (
+      <PageTransition>
       <div className="min-h-screen bg-background flex items-center
         justify-center px-4">
         <Card className="max-w-md w-full shadow-card">
@@ -103,11 +109,13 @@ export default function DispatchPage() {
           </CardContent>
         </Card>
       </div>
+      </PageTransition>
     );
   }
 
   if (tx.state === 'CONFIRMED' || tx.state === 'RESOLVED') {
     return (
+      <PageTransition>
       <div className="min-h-screen bg-background flex items-center
         justify-center px-4">
         <Card className="max-w-md w-full shadow-card">
@@ -126,11 +134,13 @@ export default function DispatchPage() {
           </CardContent>
         </Card>
       </div>
+      </PageTransition>
     );
   }
 
   if (tx.state !== 'FUNDED' && !dispatched && tx.state !== 'DISPATCHED') {
     return (
+      <PageTransition>
       <div className="min-h-screen bg-background flex items-center
         justify-center px-4">
         <Card className="max-w-md w-full shadow-card">
@@ -148,12 +158,14 @@ export default function DispatchPage() {
           </CardContent>
         </Card>
       </div>
+      </PageTransition>
     );
   }
 
   const isDispatched = dispatched || tx.state === 'DISPATCHED';
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-md mx-auto space-y-4">
 
@@ -331,5 +343,6 @@ export default function DispatchPage() {
 
       </div>
     </div>
+    </PageTransition>
   );
 }

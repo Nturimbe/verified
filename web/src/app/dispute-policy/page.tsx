@@ -1,5 +1,8 @@
+import { PageTransition } from "@/components/ui/page-transition";
+
 export default function DisputePolicyPage() {
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-2xl mx-auto">
         <p className="text-xs text-muted-foreground uppercase tracking-widest
@@ -108,5 +111,6 @@ export default function DisputePolicyPage() {
         </div>
       </div>
     </div>
+    </PageTransition>
   );
 }

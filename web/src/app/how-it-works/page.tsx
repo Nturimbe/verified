@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { PageTransition } from '@/components/ui/page-transition';
 import {
   Link2, CreditCard, Package, CheckCircle,
   ShieldAlert, Clock, ArrowRight
@@ -97,6 +98,7 @@ export default function HowItWorksPage() {
   const steps = role === 'seller' ? sellerSteps : buyerSteps;
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background">
 
       {/* Header */}
@@ -242,5 +244,6 @@ export default function HowItWorksPage() {
       </section>
 
     </div>
+    </PageTransition>
   );
 }

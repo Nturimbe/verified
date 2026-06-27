@@ -13,6 +13,7 @@ import {
   CheckCircle, Clock, Package, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageTransition } from '@/components/ui/page-transition';
 
 const STATE_ICONS: Record<string, React.ElementType> = {
   CREATED:    Clock,
@@ -65,6 +66,7 @@ export default function MyOrderPage() {
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-2xl mx-auto">
 
@@ -167,5 +169,6 @@ export default function MyOrderPage() {
 
       </div>
     </div>
+    </PageTransition>
   );
 }

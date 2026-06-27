@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Shield, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageTransition } from '@/components/ui/page-transition';
 
 const STATE_MESSAGES: Record<string, string> = {
   FUNDED:     'Payment already secured for this transaction.',
@@ -64,17 +65,22 @@ export default function PayPage() {
     }
   }
 
-  if (loading) {
-    return (
+  // Loading
+if (loading) {
+  return (
+    <PageTransition>
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-brand-main/30
           border-t-brand-main rounded-full animate-spin" />
       </div>
-    );
-  }
+    </PageTransition>
+  );
+}
 
-  if (notFound || !tx) {
-    return (
+// Not found
+if (notFound || !tx) {
+  return (
+    <PageTransition>
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
@@ -86,13 +92,17 @@ export default function PayPage() {
           </p>
         </div>
       </div>
-    );
-  }
+    </PageTransition>
+  );
+}
 
+// Main render
   const alreadyPaid = tx.state !== 'CREATED';
   const maskedMomo  = tx.sellerMomo.slice(0, 3) + '****' + tx.sellerMomo.slice(-4);
 
+
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-md mx-auto">
 
@@ -206,5 +216,6 @@ export default function PayPage() {
         </p>
       </div>
     </div>
+    </PageTransition>
   );
 }

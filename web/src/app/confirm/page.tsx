@@ -12,6 +12,7 @@ import {
   Clock, AlertTriangle, Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PageTransition } from '@/components/ui/page-transition';
 
 export default function ConfirmPage() {
   const { id } = useParams<{ id: string }>();
@@ -66,21 +67,25 @@ export default function ConfirmPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-brand-main/30
-          border-t-brand-main rounded-full animate-spin" />
-      </div>
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-brand-main/30
+            border-t-brand-main rounded-full animate-spin" />
+        </div>
+      </PageTransition>
     );
   }
 
   if (!tx) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Transaction Not Found</h2>
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Transaction Not Found</h2>
+          </div>
         </div>
-      </div>
+      </PageTransition>
     );
   }
 
@@ -101,6 +106,7 @@ export default function ConfirmPage() {
         : 'You confirmed receipt. Funds have been released to the seller.';
 
     return (
+      <PageTransition>
       <div className="min-h-screen bg-background flex items-center
         justify-center px-4">
         <Card className="max-w-md w-full shadow-card">
@@ -120,11 +126,13 @@ export default function ConfirmPage() {
           </CardContent>
         </Card>
       </div>
+      </PageTransition>
     );
   }
 
   if (disputed || tx.state === 'DISPUTED') {
     return (
+      <PageTransition>
       <div className="min-h-screen bg-background flex items-center
         justify-center px-4">
         <Card className="max-w-md w-full shadow-card">
@@ -143,11 +151,13 @@ export default function ConfirmPage() {
           </CardContent>
         </Card>
       </div>
+      </PageTransition>
     );
   }
 
   if (tx.state !== 'DISPATCHED') {
     return (
+      <PageTransition>
       <div className="min-h-screen bg-background flex items-center
         justify-center px-4">
         <Card className="max-w-md w-full shadow-card">
@@ -166,10 +176,12 @@ export default function ConfirmPage() {
           </CardContent>
         </Card>
       </div>
+      </PageTransition>
     );
   }
 
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background py-10 px-4">
       <div className="max-w-md mx-auto space-y-4">
 
@@ -277,5 +289,6 @@ export default function ConfirmPage() {
 
       </div>
     </div>
+    </PageTransition>
   );
 }

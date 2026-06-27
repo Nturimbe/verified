@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { PageTransition } from '@/components/ui/page-transition';
 import { Button } from '@/components/ui/button';
 import {
   Shield, Zap, MessageCircle, Users,
@@ -8,6 +9,7 @@ import {
 
 export default function HomePage() {
   return (
+    <PageTransition>
     <div>
 
       {/* ── Hero with video background ─────────────────────────────── */}
@@ -300,5 +302,6 @@ export default function HomePage() {
       </section>
 
     </div>
+    </PageTransition>
   );
 }
