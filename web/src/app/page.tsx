@@ -266,6 +266,7 @@ export default function HomePage() {
               width={140}
               height={40}
               className="opacity-70 hover:opacity-100 transition-opacity"
+              unoptimized
             />
           </div>
           <p className="text-xs text-green-700 mt-4">
