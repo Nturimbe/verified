@@ -38,7 +38,11 @@ export default function CreatePage() {
   const [momoHint,  setMomoHint]  = useState('');
   const [momoValid, setMomoValid] = useState<boolean | null>(null);
 
-  const fee        = form.amount ? parseFloat((parseFloat(form.amount) * 0.02).toFixed(2)) : 0;
+  const PAYSTACK_FEE = 0.019;
+  const VERIFIED_FEE = 0.011;
+  const TOTAL_FEE    = PAYSTACK_FEE + VERIFIED_FEE; // 3%
+
+  const fee        = form.amount ? parseFloat((parseFloat(form.amount) * TOTAL_FEE).toFixed(2)) : 0;
   const sellerGets = form.amount ? parseFloat((parseFloat(form.amount) - fee).toFixed(2)) : 0;
 
   function handleMomo(val: string) {
@@ -103,13 +107,27 @@ export default function CreatePage() {
   }
 
   async function handleShare() {
-    const text = `Pay securely for *${form.itemName}* (GHS ${parseFloat(form.amount).toLocaleString()}) via Verified escrow:\n${link}`;
+  const text = `Pay securely for *${form.itemName}* (GHS ${parseFloat(form.amount).toLocaleString()}) via Verified escrow:\n${link}`;
+  try {
     if (navigator.share) {
-      await navigator.share({ title: 'Pay via Verified', text, url: link });
+      await navigator.share({
+        title: `Pay for ${form.itemName}`,
+        text,
+        url: link,
+      });
     } else {
-      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+      await navigator.clipboard.writeText(link);
+      toast.success('Link copied — paste it to share.');
+    }
+  } catch (err) {
+    if (err instanceof Error && err.name !== 'AbortError') {
+      window.open(
+        'https://wa.me/?text=' + encodeURIComponent(text),
+        '_blank'
+      );
     }
   }
+}
 
   return (
     <PageTransition>
@@ -309,16 +327,17 @@ export default function CreatePage() {
                       <Button
                         onClick={handleCopy}
                         variant="outline"
-                        className="flex-1 h-9 text-sm border-brand-main
-                          text-brand-main hover:bg-brand-light"
+                        className="flex-1 h-10 text-sm rounded-xl border-brand-amber
+                          text-brand-amber hover:bg-brand-amber hover:text-white
+                          transition-all duration-200"
                       >
                         <Copy className="w-3.5 h-3.5 mr-1.5" />
-                        Copy
+                        Copy Link
                       </Button>
                       <Button
                         onClick={handleShare}
-                        className="flex-1 h-9 text-sm bg-brand-main
-                          hover:bg-brand-dark text-white border-0"
+                        className="flex-1 h-10 text-sm rounded-xl bg-brand-main
+                          hover:bg-brand-dark text-white border-0 transition-all duration-200"
                       >
                         <Share2 className="w-3.5 h-3.5 mr-1.5" />
                         Share
@@ -398,7 +417,7 @@ export default function CreatePage() {
                           </div>
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">
-                              Platform fee (2%)
+                             Platform fee (3% incl. Paystack)
                             </span>
                             <span className="text-muted-foreground">
                               − GHS {fee.toLocaleString()}
