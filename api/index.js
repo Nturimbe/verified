@@ -32,17 +32,34 @@ const adminLoginLimit = rateLimit({
 });
 
 // Security headers
-app.use((req, res, next) => {
+  app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:4000',
+    'http://127.0.0.1:4000',
+    process.env.FRONTEND_URL
+  ].filter(Boolean);
+
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-token');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'payment=(), camera=(), microphone=()');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
   next();
 });
 
-// starts with: app.use(express.json({
-// ends with:   }));
+
 app.use(express.json({
   verify: (req, res, buf) => {
     if (req.originalUrl.includes('/transactions/webhook')) {
