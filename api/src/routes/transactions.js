@@ -69,7 +69,8 @@ router.get('/verify/:reference', async (req, res) => {
     }
 
     if (transaction.state !== 'CREATED') {
-      return res.redirect(`/confirm.html?id=${transaction.id}`);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4000';
+      return res.redirect(`${frontendUrl}/confirm/${transaction.id}`);
     }
 
     transition(transaction.state, 'FUNDED');
@@ -92,7 +93,8 @@ router.get('/verify/:reference', async (req, res) => {
       }
     });
 
-    res.redirect(`/confirm.html?id=${updated.id}`);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4000';
+    res.redirect(`${frontendUrl}/confirm/${updated.id}`);
 
   } catch (error) {
     console.error(error);
@@ -302,7 +304,7 @@ router.patch('/:id/state', async (req, res) => {
     }
 
     if (newState === 'RESOLVED' && transaction.state === 'CONFIRMED') {
-      const verifiedFee  = parseFloat((transaction.amount * 0.02).toFixed(2));
+      const verifiedFee  = parseFloat((transaction.amount * 0.03).toFixed(2));
       const sellerAmount = parseFloat((transaction.amount - verifiedFee).toFixed(2));
 
       const { transferToMomo } = require('../services/paystack');
@@ -330,7 +332,7 @@ router.patch('/:id/state', async (req, res) => {
         fromAccount:   'VERIFIED_ESCROW',
         toAccount:     'VERIFIED_FEES',
         amount:        verifiedFee,
-        note:          '2% Verified platform fee'
+        note:          '3% Verified platform fee (incl. Paystack)'
       });
 
       if (transaction.sellerMomo) {
@@ -455,7 +457,7 @@ router.post('/auto-release', async (req, res) => {
       try {
         await prisma.transaction.update({ where: { id: tx.id }, data: { state: 'CONFIRMED' } });
 
-        const verifiedFee  = parseFloat((tx.amount * 0.02).toFixed(2));
+        const verifiedFee  = parseFloat((tx.amount * 0.03).toFixed(2));
         const sellerAmount = parseFloat((tx.amount - verifiedFee).toFixed(2));
 
         const { transferToMomo } = require('../services/paystack');
@@ -473,7 +475,7 @@ router.post('/auto-release', async (req, res) => {
 
         await recordMovement({
           transactionId: tx.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'VERIFIED_FEES',
-          amount: verifiedFee, note: '2% Verified platform fee'
+          amount: verifiedFee, note: '3% Verified platform fee (incl. Paystack)'
         });
 
         await prisma.transaction.update({ where: { id: tx.id }, data: { state: 'RESOLVED' } });
