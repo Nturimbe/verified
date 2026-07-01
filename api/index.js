@@ -36,7 +36,8 @@ const adminLoginLimit = rateLimit({
   const allowedOrigins = [
     'http://localhost:4000',
     'http://127.0.0.1:4000',
-    process.env.FRONTEND_URL
+    process.env.FRONTEND_URL,
+    process.env.FRONTEND_URL_2
   ].filter(Boolean);
 
   const origin = req.headers.origin;
