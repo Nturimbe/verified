@@ -11,6 +11,7 @@ import {
   ShieldAlert, Clock, ArrowRight, ArrowDown,
   Shield, Smartphone
 } from 'lucide-react';
+import { Variants } from 'framer-motion';
 
 const sellerSteps = [
   {
@@ -109,7 +110,7 @@ const faqs = [
   },
 ];
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: {},
   visible: {
     transition: {
@@ -118,14 +119,20 @@ const containerVariants = {
   },
 };
 
-const stepVariants = {
+import type { Variants } from 'framer-motion';
+
+const stepVariants: Variants = {
   hidden:  { opacity: 0, y: 32 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.4, ease: 'easeOut' as const }
+  },
 };
 
-const connectorVariants = {
+const connectorVariants: Variants = {
   hidden:  { scaleY: 0, originY: 0 },
-  visible: { scaleY: 1, transition: { duration: 0.3, ease: 'easeOut' } },
+  visible: { scaleY: 1, transition: { duration: 0.3, ease: 'easeOut' as const } },
 };
 
 export default function HowItWorksPage() {
