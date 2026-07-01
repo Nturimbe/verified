@@ -119,8 +119,6 @@ const containerVariants: Variants = {
   },
 };
 
-import type { Variants } from 'framer-motion';
-
 const stepVariants: Variants = {
   hidden:  { opacity: 0, y: 32 },
   visible: {
