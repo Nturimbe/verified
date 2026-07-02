@@ -107,10 +107,10 @@ export default function HomePage() {
                 label: 'Lost to scams', sub: 'in 9 months' },
             ].map(stat => (
               <div key={stat.num}
-                className="bg-brand-dark py-8 px-4 text-center">
+                className="bg-brand-dark py-8 px-2 sm:px-4 text-center">
                 <stat.icon className="w-5 h-5 text-brand-amber mx-auto mb-3" />
-                <div className="text-3xl font-serif font-bold
-                  text-brand-amber">{stat.num}</div>
+                <div className="text-xl sm:text-3xl font-serif font-bold 
+                text-brand-amber whitespace-nowrap overflow-hidden text-ellipsis">{stat.num}</div>
                 <div className="text-xs text-green-400 mt-1 leading-tight">
                   {stat.label}<br />
                   <span className="text-green-600">{stat.sub}</span>
