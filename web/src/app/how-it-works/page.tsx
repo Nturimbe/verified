@@ -349,7 +349,7 @@ export default function HowItWorksPage() {
                 { img: '/images/icon-dispute.png', label: '48hr Disputes' },
                 ].map(item => (
                 <div key={item.label} className="text-center">
-                  <div className="w-10 h-10 bg-brand-dark rounded-xl
+                  <div className="w-20 h-20 bg-brand-dark rounded-xl
                     flex items-center justify-center mx-auto mb-2 p-2">
                     <Image src={item.img} alt={item.label} width={24} height={24} />
                   </div>
