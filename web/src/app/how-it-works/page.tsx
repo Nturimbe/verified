@@ -351,7 +351,7 @@ export default function HowItWorksPage() {
                 <div key={item.label} className="text-center">
                   <div className="w-20 h-20 bg-brand-dark rounded-xl
                     flex items-center justify-center mx-auto mb-2 p-2">
-                    <Image src={item.img} alt={item.label} width={24} height={24} />
+                    <Image src={item.img} alt={item.label} width={44} height={44} />
                   </div>
                   <p className="text-xs text-green-400 font-medium">
                     {item.label}
