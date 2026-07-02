@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { PageTransition } from '@/components/ui/page-transition';
@@ -343,14 +344,14 @@ export default function HowItWorksPage() {
           <div className="max-w-lg mx-auto">
             <div className="grid grid-cols-3 gap-4">
               {[
-                { icon: Shield,       label: 'Escrow Protected' },
-                { icon: Smartphone,  label: 'MoMo Payments' },
-                { icon: Clock,       label: '48hr Disputes' },
-              ].map(item => (
+                { img: '/images/icon-escrow.png',  label: 'Escrow Protected' },
+                { img: '/images/icon-momo.png',    label: 'MoMo Payments' },
+                { img: '/images/icon-dispute.png', label: '48hr Disputes' },
+                ].map(item => (
                 <div key={item.label} className="text-center">
                   <div className="w-10 h-10 bg-brand-dark rounded-xl
-                    flex items-center justify-center mx-auto mb-2">
-                    <item.icon className="w-5 h-5 text-brand-amber" />
+                    flex items-center justify-center mx-auto mb-2 p-2">
+                    <Image src={item.img} alt={item.label} width={24} height={24} />
                   </div>
                   <p className="text-xs text-green-400 font-medium">
                     {item.label}
