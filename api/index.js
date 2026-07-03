@@ -77,7 +77,7 @@ if (isAllowed) {
     return res.sendStatus(200);
   }
   next();
-});
+;
 
 
 app.use(express.json({
