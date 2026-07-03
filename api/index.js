@@ -32,6 +32,7 @@ const adminLoginLimit = rateLimit({
 });
 
 // Security headers
+/*
   app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:4000',
@@ -43,7 +44,25 @@ const adminLoginLimit = rateLimit({
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-  }
+  } */
+
+  const allowedOrigins = [
+  'http://localhost:4000',
+  'http://127.0.0.1:4000',
+  process.env.FRONTEND_URL,
+  process.env.FRONTEND_URL_2
+].filter(Boolean);
+
+const origin = req.headers.origin;
+const isAllowed = origin && (
+  allowedOrigins.includes(origin) ||
+  /^https:\/\/verified-api-.*\.vercel\.app$/.test(origin) ||
+  /^https:\/\/verified2\.vercel\.app$/.test(origin)
+);
+
+if (isAllowed) {
+  res.setHeader('Access-Control-Allow-Origin', origin);
+}
 
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-token');
