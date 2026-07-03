@@ -5,8 +5,10 @@ const transactions = require('./src/routes/transactions');
 const pages        = require('./src/routes/pages');
 const disputes     = require('./src/routes/disputes');
 const adminRoutes  = require('./src/routes/admin');
+const cors         = require('cors');
 
 const app  = express();
+app.use(cors());
 const PORT = process.env.PORT || 3001;
 const rateLimit = require('express-rate-limit');
 
@@ -32,37 +34,24 @@ const adminLoginLimit = rateLimit({
 });
 
 // Security headers
-/*
-  app.use((req, res, next) => {
-  const allowedOrigins = [
-    'http://localhost:4000',
-    'http://127.0.0.1:4000',
-    process.env.FRONTEND_URL,
-    process.env.FRONTEND_URL_2
-  ].filter(Boolean);
-
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } */
-
-  const allowedOrigins = [
+ const allowedOrigins = [
   'http://localhost:4000',
   'http://127.0.0.1:4000',
   process.env.FRONTEND_URL,
   process.env.FRONTEND_URL_2
 ].filter(Boolean);
+// Security headers middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const isAllowed = origin && (
+    allowedOrigins.includes(origin) ||
+    /^https:\/\/verified-api-.*\.vercel\.app$/.test(origin) ||
+    /^https:\/\/verified2\.vercel\.app$/.test(origin)
+  );
 
-const origin = req.headers.origin;
-const isAllowed = origin && (
-  allowedOrigins.includes(origin) ||
-  /^https:\/\/verified-api-.*\.vercel\.app$/.test(origin) ||
-  /^https:\/\/verified2\.vercel\.app$/.test(origin)
-);
-
-if (isAllowed) {
-  res.setHeader('Access-Control-Allow-Origin', origin);
-}
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
 
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,x-admin-token');
@@ -77,7 +66,7 @@ if (isAllowed) {
     return res.sendStatus(200);
   }
   next();
-;
+});
 
 
 app.use(express.json({
