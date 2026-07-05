@@ -93,7 +93,13 @@ export default function MyTransactionsPage() {
             </div>
           </CardContent>
         </Card>
-
+        {searched && transactions.length === 10 && (
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            Showing your 10 most recent transactions.
+            Seller accounts with full history are coming soon.
+          </p>
+        )}
+        
         {searched && transactions.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />
