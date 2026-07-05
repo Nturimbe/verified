@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api, Transaction } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { PageTransition } from '@/components/ui/page-transition';
 import { BackButton } from '@/components/ui/back-button';
 
+
 const STATE_COLORS: Record<string, string> = {
   CREATED:    'bg-muted text-muted-foreground',
   FUNDED:     'bg-amber-50 text-amber-700 border-amber-200',
@@ -23,27 +24,41 @@ const STATE_COLORS: Record<string, string> = {
 };
 
 export default function MyTransactionsPage() {
-  const [momo,         setMomo]         = useState('');
+  const [momo, setMomo] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('my_transactions_momo') || '';
+    }
+    return '';
+  });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading,      setLoading]      = useState(false);
   const [searched,     setSearched]     = useState(false);
 
-  async function handleSearch() {
-    if (!momo || momo.length < 10) {
-      toast.error('Please enter your 10-digit MoMo number.');
-      return;
+  useEffect(() => {
+    if (momo && momo.length === 10) {
+      handleSearch(momo);
     }
-    setLoading(true);
-    try {
-      const data = await api.getSellerTransactions(momo);
-      setTransactions(data);
-      setSearched(true);
-    } catch {
-      toast.error('Could not load transactions.');
-    } finally {
-      setLoading(false);
-    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSearch(momoOverride?: string) {
+  const searchMomo = momoOverride || momo;
+  if (!searchMomo || searchMomo.length < 10) {
+    toast.error('Please enter your 10-digit MoMo number.');
+    return;
   }
+  setLoading(true);
+  try {
+    const data = await api.getSellerTransactions(searchMomo);
+    setTransactions(data);
+    setSearched(true);
+    sessionStorage.setItem('my_transactions_momo', searchMomo);
+  } catch {
+    toast.error('Could not load transactions.');
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <PageTransition>
@@ -78,7 +93,7 @@ export default function MyTransactionsPage() {
                   focus:border-brand-main flex-1"
               />
               <Button
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 disabled={loading}
                 className="h-11 px-5 bg-brand-main hover:bg-brand-dark
                   text-white border-0"
@@ -99,7 +114,7 @@ export default function MyTransactionsPage() {
             Seller accounts with full history are coming soon.
           </p>
         )}
-        
+
         {searched && transactions.length === 0 && (
           <div className="text-center py-16 text-muted-foreground">
             <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -31,14 +32,42 @@
   --radius-md:                calc(var(--radius) - 2px);
   --radius-sm:                calc(var(--radius) - 4px);
 }
+=======
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+>>>>>>> parent of 83488e2 (Remove reactCompiler from next.config to fix 500 errors)
 
 @layer base {
-  * {
-    border-color: var(--color-border);
+  :root {
+    --background:           240 20% 97%;
+    --foreground:           150 40% 10%;
+    --card:                 0 0% 100%;
+    --card-foreground:      150 40% 10%;
+    --primary:              150 46% 34%;
+    --primary-foreground:   0 0% 100%;
+    --secondary:            150 30% 90%;
+    --secondary-foreground: 150 46% 20%;
+    --muted:                150 15% 94%;
+    --muted-foreground:     150 15% 45%;
+    --accent:               38 80% 52%;
+    --accent-foreground:    0 0% 100%;
+    --destructive:          0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border:               150 20% 85%;
+    --input:                150 20% 85%;
+    --ring:                 150 46% 34%;
+    --radius:               0.625rem;
   }
+
+  * {
+    border-color: hsl(var(--border));
+    box-sizing: border-box;
+  }
+
   body {
-    background-color: var(--color-background);
-    color: var(--color-foreground);
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-family: system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
   }

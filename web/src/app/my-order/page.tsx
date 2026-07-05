@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { api, Transaction } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -44,27 +44,41 @@ const STATE_COLORS: Record<string, string> = {
 };
 
 export default function MyOrderPage() {
-  const [phone,  setPhone]  = useState('');
-  const [orders, setOrders] = useState<Transaction[]>([]);
+  const [phone, setPhone] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('my_order_phone') || '';
+    }
+    return '';
+  });
+  const [orders,  setOrders]  = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
-  async function handleSearch() {
-    if (!phone || phone.length < 10) {
-      toast.error('Please enter your phone number.');
-      return;
+  useEffect(() => {
+    if (phone && phone.length >= 10) {
+      handleSearch(phone);
     }
-    setLoading(true);
-    try {
-      const data = await api.getBuyerOrders(phone);
-      setOrders(data);
-      setSearched(true);
-    } catch {
-      toast.error('Could not load orders.');
-    } finally {
-      setLoading(false);
-    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+ async function handleSearch(phoneOverride?: string) {
+  const searchPhone = phoneOverride || phone;
+  if (!searchPhone || searchPhone.length < 10) {
+    toast.error('Please enter your phone number.');
+    return;
   }
+  setLoading(true);
+  try {
+    const data = await api.getBuyerOrders(searchPhone);
+    setOrders(data);
+    setSearched(true);
+    sessionStorage.setItem('my_order_phone', searchPhone);
+  } catch {
+    toast.error('Could not load orders.');
+  } finally {
+    setLoading(false);
+  }
+} 
 
   return (
     <PageTransition>
@@ -98,7 +112,7 @@ export default function MyOrderPage() {
                   focus:border-brand-main flex-1"
               />
               <Button
-                onClick={handleSearch}
+                onClick={() => handleSearch()}
                 disabled={loading}
                 className="h-11 px-5 bg-brand-main hover:bg-brand-dark
                   text-white border-0"

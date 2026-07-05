@@ -37,6 +37,7 @@ export default function CreatePage() {
   const [link,      setLink]      = useState('');
   const [momoHint,  setMomoHint]  = useState('');
   const [momoValid, setMomoValid] = useState<boolean | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const PAYSTACK_FEE = 0.019;
   const VERIFIED_FEE = 0.011;
@@ -102,9 +103,11 @@ export default function CreatePage() {
   }
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(link);
-    toast.success('Link copied to clipboard.');
-  }
+  await navigator.clipboard.writeText(link);
+  setCopied(true);
+  toast.success('Link copied to clipboard.');
+  setTimeout(() => setCopied(false), 3000);
+}
 
   async function handleShare() {
   const text = `Pay securely for *${form.itemName}* (GHS ${parseFloat(form.amount).toLocaleString()}) via Verified escrow:\n${link}`;
@@ -311,40 +314,70 @@ export default function CreatePage() {
                 </div>
 
                 {/* Generated link */}
-                {link && (
-                  <div className="border border-brand-amber/40
-                    bg-brand-amber-light rounded-xl p-4 space-y-3">
-                    <p className="text-xs font-semibold uppercase
-                      tracking-wide text-muted-foreground">
-                      Your secure payment link
-                    </p>
-                    <div className="bg-white rounded-lg px-3 py-2.5
-                      text-sm text-brand-dark font-mono break-all
-                      border border-border">
-                      {link}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleCopy}
-                        variant="outline"
-                        className="flex-1 h-10 text-sm rounded-xl border-brand-amber
-                          text-brand-amber hover:bg-brand-amber hover:text-white
-                          transition-all duration-200"
-                      >
-                        <Copy className="w-3.5 h-3.5 mr-1.5" />
-                        Copy Link
-                      </Button>
-                      <Button
-                        onClick={handleShare}
-                        className="flex-1 h-10 text-sm rounded-xl bg-brand-main
-                          hover:bg-brand-dark text-white border-0 transition-all duration-200"
-                      >
-                        <Share2 className="w-3.5 h-3.5 mr-1.5" />
-                        Share
-                      </Button>
-                    </div>
-                  </div>
-                )}
+{link && (
+  <div className="border border-brand-amber/40
+    bg-brand-amber-light rounded-xl p-4 space-y-3">
+    <p className="text-xs font-semibold uppercase
+      tracking-wide text-muted-foreground">
+      Your secure payment link
+    </p>
+    <div className="bg-white rounded-lg px-3 py-2.5
+      text-sm text-brand-dark font-mono break-all
+      border border-border">
+      {link}
+    </div>
+    <div className="flex gap-2">
+      <Button
+        onClick={handleCopy}
+        variant="outline"
+        className="flex-1 h-11 text-sm rounded-xl border-brand-main
+          text-brand-main hover:bg-brand-amber hover:text-white
+          hover:border-brand-amber transition-all duration-200"
+      >
+        <Copy className="w-3.5 h-3.5 mr-1.5" />
+        Copy Link
+      </Button>
+    </div>
+    <div className="grid grid-cols-2 gap-2">
+      <a
+        href={`https://wa.me/?text=${encodeURIComponent(
+          `Pay securely for *${form.itemName}* (GHS ${parseFloat(form.amount || '0').toLocaleString()}) via Verified escrow:\n${link}`
+        )}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 h-10
+          rounded-xl bg-[#25D366] hover:bg-[#1fbe5a] text-white
+          text-sm font-medium transition-colors"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.86L.072 23.927l6.256-1.439A11.942 11.942 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.003-1.371l-.36-.214-3.713.854.88-3.614-.234-.372A9.818 9.818 0 1112 21.818z"/>
+        </svg>
+        WhatsApp
+      </a>
+
+      <a
+        href={`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(
+          `Pay securely for ${form.itemName} (GHS ${parseFloat(form.amount || '0').toLocaleString()}) via Verified escrow`
+        )}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 h-10
+          rounded-xl bg-[#2AABEE] hover:bg-[#1a9bd5] text-white
+          text-sm font-medium transition-colors"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L6.12 14.26l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.696.325z"/>
+        </svg>
+        Telegram
+      </a>
+    </div>
+    <p className="copy-confirm text-center text-xs text-brand-main"
+      style={{display: copied ? 'block' : 'none'}}>
+      ✓ Copied to clipboard
+    </p>
+  </div>
+)}
 
               </CardContent>
             </Card>

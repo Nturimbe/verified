@@ -222,36 +222,39 @@ export default function ConfirmPage() {
         </Card>
 
         <Button
-          onClick={handleConfirm}
-          disabled={confirming}
-          className="w-full h-12 bg-brand-main hover:bg-brand-dark
-            text-white font-semibold text-base border-0"
-        >
-          {confirming ? (
-            <span className="flex items-center gap-2">
-              <span className="w-4 h-4 border-2 border-white/40
-                border-t-white rounded-full animate-spin" />
-              Confirming...
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              Yes, I Received It — Release Payment
-            </span>
-          )}
-        </Button>
+  onClick={handleConfirm}
+  disabled={confirming}
+  className="w-full h-14 bg-brand-main hover:bg-brand-dark
+    text-white font-semibold text-base border-0 rounded-2xl
+    transition-all duration-200 shadow-md hover:shadow-lg"
+>
+  {confirming ? (
+    <span className="flex items-center gap-2">
+      <span className="w-4 h-4 border-2 border-white/40
+        border-t-white rounded-full animate-spin" />
+      Confirming...
+    </span>
+  ) : (
+    <span className="flex items-center gap-2">
+      <CheckCircle className="w-5 h-5" />
+      Yes, I Received It — Release Payment
+    </span>
+  )}
+</Button>
 
-        {!showDispute ? (
-          <Button
-            onClick={() => setShowDispute(true)}
-            variant="outline"
-            className="w-full h-12 border-red-300 text-red-500
-              hover:bg-red-50 font-semibold"
-          >
-            <AlertCircle className="w-4 h-4 mr-2" />
-            There Is a Problem
-          </Button>
-        ) : !disputed ? (
+{!showDispute ? (
+  <Button
+    onClick={() => setShowDispute(true)}
+    variant="outline"
+    className="w-full h-14 border-2 border-red-300 text-red-500
+      hover:bg-red-500 hover:text-white hover:border-red-500
+      font-semibold rounded-2xl transition-all duration-200"
+  >
+    <AlertCircle className="w-5 h-5 mr-2" />
+    There Is a Problem
+  </Button>
+) 
+         : !disputed ? (
           <Card className="border-red-200">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-start gap-2">

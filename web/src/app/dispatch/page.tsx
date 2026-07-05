@@ -12,34 +12,41 @@ import { Package, ArrowRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Transaction } from '@/lib/api';
 import { BackButton } from '@/components/ui/back-button';
+import { useEffect } from 'react';
 
 export default function DispatchLookupPage() {
   const router = useRouter();
-  const [momo,         setMomo]         = useState('');
+
+  const [momo, setMomo] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('dispatch_momo') || '';
+    }
+    return '';
+  });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading,      setLoading]      = useState(false);
   const [searched,     setSearched]     = useState(false);
 
-  const actionable = transactions.filter(
-    tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED'
-  );
-  const others = transactions.filter(
-    tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED'
-  );
+  // Auto-search if momo was saved
+  useEffect(() => {
+    if (momo && momo.length === 10) {
+      handleSearch(momo);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  async function handleSearch() {
-    if (!momo || momo.length < 10) {
+  async function handleSearch(momoOverride?: string) {
+    const searchMomo = momoOverride || momo;
+    if (!searchMomo || searchMomo.length < 10) {
       toast.error('Enter your 10-digit MoMo number.');
       return;
     }
     setLoading(true);
     try {
-      const data = await api.getSellerTransactions(momo);
+      const data = await api.getSellerTransactions(searchMomo);
       setTransactions(data);
       setSearched(true);
-      if (data.length === 0) {
-        toast.info('No transactions found for this number.');
-      }
+      sessionStorage.setItem('dispatch_momo', searchMomo);
     } catch {
       toast.error('Could not load transactions.');
     } finally {
@@ -55,6 +62,9 @@ export default function DispatchLookupPage() {
     DISPUTED:   'bg-red-50 text-red-600 border-red-200',
     RESOLVED:   'bg-muted text-muted-foreground',
   };
+
+  const actionable = transactions.filter(tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED');
+  const others = transactions.filter(tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED');
 
   return (
     <PageTransition>
@@ -87,7 +97,7 @@ export default function DispatchLookupPage() {
                   className="h-11 text-base border-border focus:border-brand-main flex-1"
                 />
                 <Button
-                  onClick={handleSearch}
+                  onClick={() => handleSearch()}
                   disabled={loading}
                   className="h-11 px-5 bg-brand-main hover:bg-brand-dark text-white border-0"
                 >
