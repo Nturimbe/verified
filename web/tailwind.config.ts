@@ -1,13 +1,12 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-<<<<<<< HEAD
-=======
   theme: {
     extend: {
       colors: {
@@ -50,14 +49,14 @@ const config: Config = {
         },
       },
       borderRadius: {
-        lg:  "var(--radius)",
-        md:  "calc(var(--radius) - 2px)",
-        sm:  "calc(var(--radius) - 4px)",
-        xl:  "1rem",
+        lg:    "var(--radius)",
+        md:    "calc(var(--radius) - 2px)",
+        sm:    "calc(var(--radius) - 4px)",
+        xl:    "1rem",
         "2xl": "1.5rem",
       },
       boxShadow: {
-        card:       "0 2px 12px rgba(0,0,0,0.06)",
+        card:         "0 2px 12px rgba(0,0,0,0.06)",
         "card-hover": "0 4px 20px rgba(0,0,0,0.10)",
       },
       fontFamily: {
@@ -67,7 +66,6 @@ const config: Config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
->>>>>>> parent of 83488e2 (Remove reactCompiler from next.config to fix 500 errors)
 };
 
 export default config;
