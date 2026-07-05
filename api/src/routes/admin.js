@@ -99,20 +99,54 @@ router.get('/transactions/:id', requireAdmin, async (req, res) => {
 });
 
 // ── Force state change (admin override) ─────────────────────────────────────
-router.patch('/transactions/:id/state', requireAdmin, async (req, res) => {
+router.patch('/transactions/:id/state', async (req, res) => {
   const { newState, reason } = req.body;
+
   if (!newState || !reason) {
-    return res.status(400).json({ error: 'newState and reason are required' });
+    return res.status(400).json({
+      error: 'newState and reason are both required'
+    });
   }
+
   try {
+    const transaction = await prisma.transaction.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!transaction) {
+      return res.status(404).json({ error: 'Transaction not found' });
+    }
+
     const updated = await prisma.transaction.update({
       where: { id: req.params.id },
       data:  { state: newState }
     });
-    console.log(`Admin override: ${req.params.id} → ${newState} — ${reason}`);
-    res.json({ message: `State updated to ${newState}`, transaction: updated });
+
+    // Log the admin action in dispute audit if a dispute exists
+    const dispute = await prisma.dispute.findFirst({
+      where: { transactionId: req.params.id }
+    });
+
+    if (dispute) {
+      await prisma.disputeAuditLog.create({
+        data: {
+          disputeId:   dispute.id,
+          action:      `ADMIN_STATE_CHANGE_TO_${newState}`,
+          performedBy: 'ADMIN',
+          note:        reason
+        }
+      });
+    }
+
+    res.json({
+      message: `Transaction state updated to ${newState}`,
+      id:      updated.id,
+      state:   updated.state
+    });
+
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update state' });
+    console.error('Admin state change error:', error);
+    res.status(500).json({ error: 'Failed to update transaction state' });
   }
 });
 

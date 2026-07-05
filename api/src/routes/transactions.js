@@ -517,6 +517,7 @@ router.get('/seller/:momo', async (req, res) => {
     const transactions = await prisma.transaction.findMany({
       where:   { sellerMomo: req.params.momo },
       orderBy: { createdAt: 'desc' },
+      take: 10,
       include: { ledgerEntries: true }
     });
     res.json(transactions);

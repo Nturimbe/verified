@@ -6,6 +6,8 @@ const pages        = require('./src/routes/pages');
 const disputes     = require('./src/routes/disputes');
 const adminRoutes  = require('./src/routes/admin');
 const cors         = require('cors');
+const adminAuthRoutes = require('./src/routes/adminAuth');
+
 
 const app  = express();
 app.use(cors());
@@ -88,6 +90,7 @@ app.post('/admin/api/overview',    adminLoginLimit);
 app.use('/transactions', transactions);
 app.use('/disputes', disputes);
 app.use('/admin/api', adminRoutes);
+app.use('/admin/auth', adminAuthRoutes);
 
 // Root — serve landing page
 app.get('/', (req, res) => {

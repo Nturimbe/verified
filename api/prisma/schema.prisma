@@ -68,3 +68,15 @@ model DisputeAuditLog {
 
   dispute     Dispute  @relation(fields: [disputeId], references: [id])
 }
+
+model Admin {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("ADMIN") // SUPER_ADMIN or ADMIN
+  createdBy    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
