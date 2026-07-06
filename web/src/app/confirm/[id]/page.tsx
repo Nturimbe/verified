@@ -187,7 +187,7 @@ export default function ConfirmPage() {
       <div className="max-w-md mx-auto space-y-4">
 
         <div className="mb-6">
-          <BackButton href="/my-order" />
+          <BackButton />
           <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
           Delivery Confirmation
           </p>

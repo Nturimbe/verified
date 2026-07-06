@@ -10,10 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import {
   Link2, Copy, Share2, CheckCircle,
-  Shield, Clock, AlertCircle
+  Shield, Clock, AlertCircle, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/back-button';
+
 
 const NETWORKS: Record<string, string> = {
   '024': 'MTN MoMo', '054': 'MTN MoMo',
@@ -129,6 +130,31 @@ export default function CreatePage() {
         '_blank'
       );
     }
+  }
+}
+
+const [showShareSheet, setShowShareSheet] = useState(false);
+
+function shareText() {
+  return `Pay securely for *${form.itemName}* (GHS ${parseFloat(form.amount || '0').toLocaleString()}) via Verified escrow:\n${link}`;
+}
+
+async function handleNativeShare() {
+  if (typeof navigator !== 'undefined' && navigator.share) {
+    try {
+      await navigator.share({
+        title: 'Pay via Verified',
+        text: shareText(),
+        url: link
+      });
+      setShowShareSheet(false);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        toast.error('Sharing failed. Try one of the options below.');
+      }
+    }
+  } else {
+    toast.error('Native sharing not supported on this browser. Use the options below.');
   }
 }
 
@@ -314,6 +340,7 @@ export default function CreatePage() {
                 </div>
 
                 {/* Generated link */}
+{/* Generated link */}
 {link && (
   <div className="border border-brand-amber/40
     bg-brand-amber-light rounded-xl p-4 space-y-3">
@@ -337,40 +364,15 @@ export default function CreatePage() {
         <Copy className="w-3.5 h-3.5 mr-1.5" />
         Copy Link
       </Button>
-    </div>
-    <div className="grid grid-cols-2 gap-2">
-      <a
-        href={`https://wa.me/?text=${encodeURIComponent(
-          `Pay securely for *${form.itemName}* (GHS ${parseFloat(form.amount || '0').toLocaleString()}) via Verified escrow:\n${link}`
-        )}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 h-10
-          rounded-xl bg-[#25D366] hover:bg-[#1fbe5a] text-white
-          text-sm font-medium transition-colors"
+      <Button
+        onClick={() => setShowShareSheet(true)}
+        className="flex-1 h-11 text-sm rounded-xl bg-brand-main
+          hover:bg-brand-dark text-white border-0
+          transition-all duration-200"
       >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.86L.072 23.927l6.256-1.439A11.942 11.942 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.818 9.818 0 01-5.003-1.371l-.36-.214-3.713.854.88-3.614-.234-.372A9.818 9.818 0 1112 21.818z"/>
-        </svg>
-        WhatsApp
-      </a>
-
-      <a
-        href={`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(
-          `Pay securely for ${form.itemName} (GHS ${parseFloat(form.amount || '0').toLocaleString()}) via Verified escrow`
-        )}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center gap-2 h-10
-          rounded-xl bg-[#2AABEE] hover:bg-[#1a9bd5] text-white
-          text-sm font-medium transition-colors"
-      >
-        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.247l-1.97 9.289c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12L6.12 14.26l-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.696.325z"/>
-        </svg>
-        Telegram
-      </a>
+        <Share2 className="w-3.5 h-3.5 mr-1.5" />
+        Share
+      </Button>
     </div>
     <p className="copy-confirm text-center text-xs text-brand-main"
       style={{display: copied ? 'block' : 'none'}}>
@@ -379,6 +381,87 @@ export default function CreatePage() {
   </div>
 )}
 
+{/* Share sheet modal */}
+{showShareSheet && (
+  <div
+    className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center
+      justify-center"
+    onClick={() => setShowShareSheet(false)}
+  >
+    <div
+      className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm
+        p-5 space-y-3"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <p className="font-semibold text-foreground">Share via</p>
+        <button onClick={() => setShowShareSheet(false)}
+          className="text-muted-foreground hover:text-foreground">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <button
+        onClick={handleNativeShare}
+        className="w-full flex items-center gap-3 p-3 rounded-xl
+          bg-brand-light hover:bg-brand-main hover:text-white
+          text-brand-dark font-medium transition-colors"
+      >
+        <Share2 className="w-5 h-5" />
+        More options (Instagram, TikTok, Mail, etc.)
+      </button>
+
+      <div className="grid grid-cols-2 gap-2 pt-2">
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(shareText())}`}
+          target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 h-11
+            rounded-xl bg-[#25D366] text-white text-sm font-medium"
+        >
+          WhatsApp
+        </a>
+        <a
+          href={`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(shareText())}`}
+          target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 h-11
+            rounded-xl bg-[#2AABEE] text-white text-sm font-medium"
+        >
+          Telegram
+        </a>
+        <a
+          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`}
+          target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 h-11
+            rounded-xl bg-[#1877F2] text-white text-sm font-medium"
+        >
+          Facebook
+        </a>
+        <a
+          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText())}`}
+          target="_blank" rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 h-11
+            rounded-xl bg-black text-white text-sm font-medium"
+        >
+          X / Twitter
+        </a>
+        <a
+          href={`sms:?body=${encodeURIComponent(shareText())}`}
+          className="flex items-center justify-center gap-2 h-11
+            rounded-xl bg-gray-600 text-white text-sm font-medium"
+        >
+          SMS
+        </a>
+        <a
+          href={`mailto:?subject=${encodeURIComponent('Payment Request')}&body=${encodeURIComponent(shareText())}`}
+          className="flex items-center justify-center gap-2 h-11
+            rounded-xl bg-gray-500 text-white text-sm font-medium"
+        >
+          Email
+        </a>
+      </div>
+    </div>
+  </div>
+)}
               </CardContent>
             </Card>
           </div>

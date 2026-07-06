@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Button } from '@/components/ui/button';
@@ -12,47 +12,47 @@ import { Package, ArrowRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Transaction } from '@/lib/api';
 import { BackButton } from '@/components/ui/back-button';
-import { useEffect } from 'react';
 
-export default function DispatchLookupPage() {
+export default function MyOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlPhone = searchParams.get('phone') || '';
 
-  const [momo, setMomo] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('dispatch_momo') || '';
-    }
-    return '';
-  });
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading,      setLoading]      = useState(false);
-  const [searched,     setSearched]     = useState(false);
+  const [phone, setPhone] = useState(urlPhone);
+  const [orders, setOrders] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  // Auto-search if momo was saved
   useEffect(() => {
-    if (momo && momo.length === 10) {
-      handleSearch(momo);
+    if (urlPhone && urlPhone.length >= 10) {
+      setPhone(urlPhone);
+      fetchOrders(urlPhone);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [urlPhone]);
 
-  async function handleSearch(momoOverride?: string) {
-    const searchMomo = momoOverride || momo;
-    if (!searchMomo || searchMomo.length < 10) {
-      toast.error('Enter your 10-digit MoMo number.');
-      return;
-    }
+  async function fetchOrders(searchPhone: string) {
     setLoading(true);
     try {
-      const data = await api.getSellerTransactions(searchMomo);
-      setTransactions(data);
+      const data = await api.getBuyerOrders(searchPhone);
+      setOrders(data);
       setSearched(true);
-      sessionStorage.setItem('dispatch_momo', searchMomo);
     } catch {
-      toast.error('Could not load transactions.');
+      toast.error('Could not load orders.');
     } finally {
       setLoading(false);
     }
   }
+
+  function handleSearch() {
+    if (!phone || phone.length < 10) {
+      toast.error('Please enter your phone number.');
+      return;
+    }
+    router.push(`/my-order?phone=${encodeURIComponent(phone)}`);
+  }
+
+  // ... rest stays the same
 
   const STATE_COLORS: Record<string, string> = {
     CREATED:    'bg-muted text-muted-foreground',
@@ -63,8 +63,8 @@ export default function DispatchLookupPage() {
     RESOLVED:   'bg-muted text-muted-foreground',
   };
 
-  const actionable = transactions.filter(tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED');
-  const others = transactions.filter(tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED');
+  const actionable = orders.filter(tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED');
+  const others = orders.filter(tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED');
 
   return (
     <PageTransition>
@@ -91,8 +91,8 @@ export default function DispatchLookupPage() {
                   type="tel"
                   placeholder="Your MoMo number e.g. 0551234567"
                   maxLength={10}
-                  value={momo}
-                  onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
+                  value={phone}
+                  onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
                   className="h-11 text-base border-border focus:border-brand-main flex-1"
                 />

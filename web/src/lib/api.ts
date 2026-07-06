@@ -88,6 +88,13 @@ async function apiFetch<T>(
     ...options,
   });
 
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text();
+    console.error('Non-JSON response from API:', API_URL + path, text.slice(0, 200));
+    throw new Error(`Server returned an unexpected response (${res.status}). Check API_URL configuration.`);
+  }
+
   const data = await res.json();
 
   if (!res.ok) {

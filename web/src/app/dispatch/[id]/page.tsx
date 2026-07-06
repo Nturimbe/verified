@@ -171,7 +171,7 @@ if (!tx) {
       <div className="max-w-md mx-auto space-y-4">
 
         <div className="mb-6">
-          <BackButton href="/dispatch" />
+          <BackButton />
           <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
             Seller Dispatch
            </p>

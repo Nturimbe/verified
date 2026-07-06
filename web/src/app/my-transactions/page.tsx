@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, Transaction } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -24,41 +25,45 @@ const STATE_COLORS: Record<string, string> = {
 };
 
 export default function MyTransactionsPage() {
-  const [momo, setMomo] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('my_transactions_momo') || '';
-    }
-    return '';
-  });
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlMomo = searchParams.get('momo') || '';
+
+  const [momo, setMomo] = useState(urlMomo);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading,      setLoading]      = useState(false);
-  const [searched,     setSearched]     = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
   useEffect(() => {
-    if (momo && momo.length === 10) {
-      handleSearch(momo);
+    if (urlMomo && urlMomo.length === 10) {
+      setMomo(urlMomo);
+      fetchTransactions(urlMomo);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [urlMomo]);
 
-  async function handleSearch(momoOverride?: string) {
-  const searchMomo = momoOverride || momo;
-  if (!searchMomo || searchMomo.length < 10) {
-    toast.error('Please enter your 10-digit MoMo number.');
-    return;
+  async function fetchTransactions(searchMomo: string) {
+    setLoading(true);
+    try {
+      const data = await api.getSellerTransactions(searchMomo);
+      setTransactions(data);
+      setSearched(true);
+    } catch {
+      toast.error('Could not load transactions.');
+    } finally {
+      setLoading(false);
+    }
   }
-  setLoading(true);
-  try {
-    const data = await api.getSellerTransactions(searchMomo);
-    setTransactions(data);
-    setSearched(true);
-    sessionStorage.setItem('my_transactions_momo', searchMomo);
-  } catch {
-    toast.error('Could not load transactions.');
-  } finally {
-    setLoading(false);
+
+  function handleSearch() {
+    if (!momo || momo.length < 10) {
+      toast.error('Please enter your 10-digit MoMo number.');
+      return;
+    }
+    // Push a real URL with the momo as a query param —
+    // this creates a genuine, back-button-friendly history entry
+    router.push(`/my-transactions?momo=${momo}`);
   }
-}
 
   return (
     <PageTransition>

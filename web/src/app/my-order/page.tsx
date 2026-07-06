@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, Transaction } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -44,41 +45,44 @@ const STATE_COLORS: Record<string, string> = {
 };
 
 export default function MyOrderPage() {
-  const [phone, setPhone] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('my_order_phone') || '';
-    }
-    return '';
-  });
-  const [orders,  setOrders]  = useState<Transaction[]>([]);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlPhone = searchParams.get('phone') || '';
+
+  const [phone, setPhone] = useState(urlPhone);
+  const [orders, setOrders] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   useEffect(() => {
-    if (phone && phone.length >= 10) {
-      handleSearch(phone);
+    if (urlPhone && urlPhone.length >= 10) {
+      setPhone(urlPhone);
+      fetchOrders(urlPhone);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [urlPhone]);
 
- async function handleSearch(phoneOverride?: string) {
-  const searchPhone = phoneOverride || phone;
-  if (!searchPhone || searchPhone.length < 10) {
-    toast.error('Please enter your phone number.');
-    return;
+  async function fetchOrders(searchPhone: string) {
+    setLoading(true);
+    try {
+      const data = await api.getBuyerOrders(searchPhone);
+      setOrders(data);
+      setSearched(true);
+    } catch {
+      toast.error('Could not load orders.');
+    } finally {
+      setLoading(false);
+    }
   }
-  setLoading(true);
-  try {
-    const data = await api.getBuyerOrders(searchPhone);
-    setOrders(data);
-    setSearched(true);
-    sessionStorage.setItem('my_order_phone', searchPhone);
-  } catch {
-    toast.error('Could not load orders.');
-  } finally {
-    setLoading(false);
+
+  function handleSearch() {
+    if (!phone || phone.length < 10) {
+      toast.error('Please enter your phone number.');
+      return;
+    }
+    router.push(`/my-order?phone=${encodeURIComponent(phone)}`);
   }
-} 
+
 
   return (
     <PageTransition>
