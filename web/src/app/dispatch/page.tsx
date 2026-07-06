@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,6 @@ import { Package, ArrowRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Transaction } from '@/lib/api';
 import { BackButton } from '@/components/ui/back-button';
-import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 
 export default function MyOrderPage() {
   const router = useRouter();
@@ -64,8 +62,8 @@ export default function MyOrderPage() {
     RESOLVED:   'bg-muted text-muted-foreground',
   };
 
-  const actionable = transactions.filter(tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED');
-  const others = transactions.filter(tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED');
+  const actionable = orders.filter(tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED');
+  const others = orders.filter(tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED');
 
   return (
     <PageTransition>
@@ -92,8 +90,8 @@ export default function MyOrderPage() {
                   type="tel"
                   placeholder="Your MoMo number e.g. 0551234567"
                   maxLength={10}
-                  value={momo}
-                  onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
+                  value={phone}
+                  onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
                   className="h-11 text-base border-border focus:border-brand-main flex-1"
                 />
