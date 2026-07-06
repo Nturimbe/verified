@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, Transaction } from '@/lib/api';
@@ -44,7 +44,7 @@ const STATE_COLORS: Record<string, string> = {
   DISPUTED:   'bg-red-50 text-red-600 border-red-200',
 };
 
-export default function MyOrderPage() {
+function MyOrderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlPhone = searchParams.get('phone') || '';
@@ -83,113 +83,116 @@ export default function MyOrderPage() {
     router.push(`/my-order?phone=${encodeURIComponent(phone)}`);
   }
 
-
   return (
     <PageTransition>
-    <div className="min-h-screen bg-background py-10 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-background py-10 px-4">
+        <div className="max-w-2xl mx-auto">
 
-        <div className="mb-8">
-          <BackButton />
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-            Buyer Portal
-          </p>
-          <h1 className="text-3xl font-serif font-bold text-foreground">
-            Track My Orders
-          </h1>
-        </div>
-
-        <Card className="shadow-card border-border mb-6">
-          <CardContent className="p-5 space-y-3">
-            <Label className="text-xs font-semibold uppercase
-              tracking-wide text-muted-foreground">
-              Your WhatsApp or Phone Number
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                type="tel"
-                placeholder="e.g. 0241234567"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                className="h-11 text-base border-border
-                  focus:border-brand-main flex-1"
-              />
-              <Button
-                onClick={() => handleSearch()}
-                disabled={loading}
-                className="h-11 px-5 bg-brand-main hover:bg-brand-dark
-                  text-white border-0"
-              >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-white/40
-                    border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Search className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {searched && orders.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">No orders found for this number.</p>
+          <div className="mb-8">
+            <BackButton />
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+              Buyer Portal
+            </p>
+            <h1 className="text-3xl font-serif font-bold text-foreground">
+              Track My Orders
+            </h1>
           </div>
-        )}
 
-        <div className="space-y-3">
-          {orders.map(order => {
-            const Icon = STATE_ICONS[order.state] || Clock;
-            return (
-              <Card key={order.id}
-                className="shadow-card border-border hover:shadow-card-hover
-                  transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-foreground truncate">
-                        {order.itemName}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(order.createdAt).toLocaleDateString('en-GH', {
-                          day: 'numeric', month: 'short', year: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-brand-main">
-                        GHS {order.amount.toLocaleString()}
-                      </p>
-                      <Badge className={`text-xs mt-1 border flex items-center
-                        gap-1 ${STATE_COLORS[order.state]}`}>
-                        <Icon className="w-3 h-3" />
-                        {STATE_LABELS[order.state]}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {order.state === 'DISPATCHED' && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <Link
-                        href={`/confirm/${order.id}`}
-                        className="flex items-center gap-1 text-xs
-                          font-medium text-brand-main hover:underline"
-                      >
-                        Confirm receipt
-                        <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </div>
+          <Card className="shadow-card border-border mb-6">
+            <CardContent className="p-5 space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Your WhatsApp or Phone Number
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="tel"
+                  placeholder="e.g. 0241234567"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                  className="h-11 text-base border-border focus:border-brand-main flex-1"
+                />
+                <Button
+                  onClick={() => handleSearch()}
+                  disabled={loading}
+                  className="h-11 px-5 bg-brand-main hover:bg-brand-dark text-white border-0"
+                >
+                  {loading ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
                   )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
+          {searched && orders.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No orders found for this number.</p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {orders.map(order => {
+              const Icon = STATE_ICONS[order.state] || Clock;
+              return (
+                <Card key={order.id} className="shadow-card border-border hover:shadow-card-hover transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-foreground truncate">
+                          {order.itemName}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(order.createdAt).toLocaleDateString('en-GH', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-bold text-brand-main">
+                          GHS {order.amount.toLocaleString()}
+                        </p>
+                        <Badge className={`text-xs mt-1 border flex items-center gap-1 ${STATE_COLORS[order.state]}`}>
+                          <Icon className="w-3 h-3" />
+                          {STATE_LABELS[order.state]}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {order.state === 'DISPATCHED' && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <Link
+                          href={`/confirm/${order.id}`}
+                          className="flex items-center gap-1 text-xs font-medium text-brand-main hover:underline"
+                        >
+                          Confirm receipt
+                          <ArrowRight className="w-3 h-3" />
+                        </Link>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+        </div>
       </div>
-    </div>
     </PageTransition>
+  );
+}
+
+export default function MyOrderPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-brand-main/30 border-t-brand-main rounded-full animate-spin" />
+      </div>
+    }>
+      <MyOrderContent />
+    </Suspense>
   );
 }

@@ -1,69 +1,71 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, Transaction } from '@/lib/api';
 import { PageTransition } from '@/components/ui/page-transition';
+import { BackButton } from '@/components/ui/back-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Package, ArrowRight, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { Transaction } from '@/lib/api';
-import { BackButton } from '@/components/ui/back-button';
 
-export default function MyOrderPage() {
+const STATE_COLORS: Record<string, string> = {
+  CREATED:    'bg-muted text-muted-foreground',
+  FUNDED:     'bg-amber-50 text-amber-700 border-amber-200',
+  DISPATCHED: 'bg-blue-50 text-blue-700 border-blue-200',
+  CONFIRMED:  'bg-green-50 text-brand-main border-green-200',
+  DISPUTED:   'bg-red-50 text-red-600 border-red-200',
+  RESOLVED:   'bg-muted text-muted-foreground',
+};
+
+function DispatchLookupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const urlPhone = searchParams.get('phone') || '';
+  const urlMomo = searchParams.get('momo') || '';
 
-  const [phone, setPhone] = useState(urlPhone);
-  const [orders, setOrders] = useState<Transaction[]>([]);
+  const [momo, setMomo] = useState(urlMomo);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
   useEffect(() => {
-    if (urlPhone && urlPhone.length >= 10) {
-      setPhone(urlPhone);
-      fetchOrders(urlPhone);
+    if (urlMomo && urlMomo.length === 10) {
+      setMomo(urlMomo);
+      fetchTransactions(urlMomo);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlPhone]);
+  }, [urlMomo]);
 
-  async function fetchOrders(searchPhone: string) {
+  async function fetchTransactions(searchMomo: string) {
     setLoading(true);
     try {
-      const data = await api.getBuyerOrders(searchPhone);
-      setOrders(data);
+      const data = await api.getSellerTransactions(searchMomo);
+      setTransactions(data);
       setSearched(true);
     } catch {
-      toast.error('Could not load orders.');
+      toast.error('Could not load transactions.');
     } finally {
       setLoading(false);
     }
   }
 
   function handleSearch() {
-    if (!phone || phone.length < 10) {
-      toast.error('Please enter your phone number.');
+    if (!momo || momo.length < 10) {
+      toast.error('Enter your 10-digit MoMo number.');
       return;
     }
-    router.push(`/my-order?phone=${encodeURIComponent(phone)}`);
+    router.push(`/dispatch?momo=${momo}`);
   }
 
-
-  const STATE_COLORS: Record<string, string> = {
-    CREATED:    'bg-muted text-muted-foreground',
-    FUNDED:     'bg-amber-50 text-amber-700 border-amber-200',
-    DISPATCHED: 'bg-blue-50 text-blue-700 border-blue-200',
-    CONFIRMED:  'bg-green-50 text-brand-main border-green-200',
-    DISPUTED:   'bg-red-50 text-red-600 border-red-200',
-    RESOLVED:   'bg-muted text-muted-foreground',
-  };
-
-  const actionable = orders.filter(tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED');
-  const others = orders.filter(tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED');
+  const actionable = transactions.filter(
+    tx => tx.state === 'FUNDED' || tx.state === 'DISPATCHED'
+  );
+  const others = transactions.filter(
+    tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED'
+  );
 
   return (
     <PageTransition>
@@ -90,8 +92,8 @@ export default function MyOrderPage() {
                   type="tel"
                   placeholder="Your MoMo number e.g. 0551234567"
                   maxLength={10}
-                  value={phone}
-                  onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
+                  value={momo}
+                  onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
                   onKeyDown={e => e.key === 'Enter' && handleSearch()}
                   className="h-11 text-base border-border focus:border-brand-main flex-1"
                 />
@@ -109,11 +111,9 @@ export default function MyOrderPage() {
             </CardContent>
           </Card>
 
-          {/* Actionable transactions — FUNDED or DISPATCHED */}
           {searched && actionable.length > 0 && (
             <div className="mb-6">
-              <p className="text-xs font-semibold uppercase tracking-wide
-                text-brand-main mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-main mb-3">
                 Needs Action ({actionable.length})
               </p>
               <div className="space-y-3">
@@ -154,7 +154,6 @@ export default function MyOrderPage() {
             </div>
           )}
 
-          {/* No actionable transactions */}
           {searched && actionable.length === 0 && (
             <div className="text-center py-10 text-muted-foreground mb-6">
               <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -165,11 +164,9 @@ export default function MyOrderPage() {
             </div>
           )}
 
-          {/* Other transactions */}
           {searched && others.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide
-                text-muted-foreground mb-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                 Other Transactions ({others.length})
               </p>
               <div className="space-y-2">
@@ -206,5 +203,17 @@ export default function MyOrderPage() {
         </div>
       </div>
     </PageTransition>
+  );
+}
+
+export default function DispatchLookupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-brand-main/30 border-t-brand-main rounded-full animate-spin" />
+      </div>
+    }>
+      <DispatchLookupContent />
+    </Suspense>
   );
 }

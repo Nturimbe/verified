@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, Transaction } from '@/lib/api';
@@ -14,7 +14,6 @@ import { toast } from 'sonner';
 import { PageTransition } from '@/components/ui/page-transition';
 import { BackButton } from '@/components/ui/back-button';
 
-
 const STATE_COLORS: Record<string, string> = {
   CREATED:    'bg-muted text-muted-foreground',
   FUNDED:     'bg-amber-50 text-amber-700 border-amber-200',
@@ -24,7 +23,7 @@ const STATE_COLORS: Record<string, string> = {
   RESOLVED:   'bg-muted text-muted-foreground',
 };
 
-export default function MyTransactionsPage() {
+function MyTransactionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlMomo = searchParams.get('momo') || '';
@@ -60,125 +59,126 @@ export default function MyTransactionsPage() {
       toast.error('Please enter your 10-digit MoMo number.');
       return;
     }
-    // Push a real URL with the momo as a query param —
-    // this creates a genuine, back-button-friendly history entry
     router.push(`/my-transactions?momo=${momo}`);
   }
 
   return (
     <PageTransition>
-    <div className="min-h-screen bg-background py-10 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-background py-10 px-4">
+        <div className="max-w-2xl mx-auto">
 
-        <div className="mb-8">
-          <BackButton />
-          <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-            Seller Portal
-          </p>
-          <h1 className="text-3xl font-serif font-bold text-foreground">
-            My Transactions
-          </h1>
-        </div>
-
-        <Card className="shadow-card border-border mb-6">
-          <CardContent className="p-5 space-y-3">
-            <Label className="text-xs font-semibold uppercase
-              tracking-wide text-muted-foreground">
-              Your MoMo Number
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                type="tel"
-                placeholder="e.g. 0551234567"
-                maxLength={10}
-                value={momo}
-                onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                className="h-11 text-base border-border
-                  focus:border-brand-main flex-1"
-              />
-              <Button
-                onClick={() => handleSearch()}
-                disabled={loading}
-                className="h-11 px-5 bg-brand-main hover:bg-brand-dark
-                  text-white border-0"
-              >
-                {loading ? (
-                  <span className="w-4 h-4 border-2 border-white/40
-                    border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Search className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-        {searched && transactions.length === 10 && (
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            Showing your 10 most recent transactions.
-            Seller accounts with full history are coming soon.
-          </p>
-        )}
-
-        {searched && transactions.length === 0 && (
-          <div className="text-center py-16 text-muted-foreground">
-            <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">
-              No transactions found for this MoMo number.
+          <div className="mb-8">
+            <BackButton />
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+              Seller Portal
             </p>
+            <h1 className="text-3xl font-serif font-bold text-foreground">
+              My Transactions
+            </h1>
           </div>
-        )}
 
-        <div className="space-y-3">
-          {transactions.map(tx => (
-            <Card key={tx.id}
-              className="shadow-card border-border hover:shadow-card-hover
-                transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground truncate">
-                      {tx.itemName}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(tx.createdAt).toLocaleDateString('en-GH', {
-                        day: 'numeric', month: 'short', year: 'numeric'
-                      })}
-                      {tx.buyerName && ` · ${tx.buyerName}`}
-                    </p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="font-bold text-brand-main">
-                      GHS {tx.amount.toLocaleString()}
-                    </p>
-                    <Badge className={`text-xs mt-1 border
-                      ${STATE_COLORS[tx.state]}`}>
-                      {tx.state}
-                    </Badge>
-                  </div>
-                </div>
+          <Card className="shadow-card border-border mb-6">
+            <CardContent className="p-5 space-y-3">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Your MoMo Number
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  type="tel"
+                  placeholder="e.g. 0551234567"
+                  maxLength={10}
+                  value={momo}
+                  onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
+                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                  className="h-11 text-base border-border focus:border-brand-main flex-1"
+                />
+                <Button
+                  onClick={() => handleSearch()}
+                  disabled={loading}
+                  className="h-11 px-5 bg-brand-main hover:bg-brand-dark text-white border-0"
+                >
+                  {loading ? (
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-                {(tx.state === 'FUNDED' || tx.state === 'DISPATCHED') && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <Link
-                      href={`/dispatch/${tx.id}`}
-                      className="flex items-center gap-1 text-xs
-                        font-medium text-brand-main hover:underline"
-                    >
-                      {tx.state === 'FUNDED'
-                        ? 'Go to dispatch page'
-                        : 'View dispatch page'}
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
+          {searched && transactions.length === 10 && (
+            <p className="text-center text-xs text-muted-foreground mt-4 mb-4">
+              Showing your 10 most recent transactions.
+              Seller accounts with full history are coming soon.
+            </p>
+          )}
+
+          {searched && transactions.length === 0 && (
+            <div className="text-center py-16 text-muted-foreground">
+              <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">
+                No transactions found for this MoMo number.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {transactions.map(tx => (
+              <Card key={tx.id} className="shadow-card border-border hover:shadow-card-hover transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground truncate">
+                        {tx.itemName}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {new Date(tx.createdAt).toLocaleDateString('en-GH', {
+                          day: 'numeric', month: 'short', year: 'numeric'
+                        })}
+                        {tx.buyerName && ` · ${tx.buyerName}`}
+                      </p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-bold text-brand-main">
+                        GHS {tx.amount.toLocaleString()}
+                      </p>
+                      <Badge className={`text-xs mt-1 border ${STATE_COLORS[tx.state]}`}>
+                        {tx.state}
+                      </Badge>
+                    </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+
+                  {(tx.state === 'FUNDED' || tx.state === 'DISPATCHED') && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <Link
+                        href={`/dispatch/${tx.id}`}
+                        className="flex items-center gap-1 text-xs font-medium text-brand-main hover:underline"
+                      >
+                        {tx.state === 'FUNDED' ? 'Go to dispatch page' : 'View dispatch page'}
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
         </div>
-
       </div>
-    </div>
     </PageTransition>
+  );
+}
+
+export default function MyTransactionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-brand-main/30 border-t-brand-main rounded-full animate-spin" />
+      </div>
+    }>
+      <MyTransactionsContent />
+    </Suspense>
   );
 }
