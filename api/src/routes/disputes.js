@@ -8,8 +8,8 @@ const { sanitizeText } = require('../utils/sanitize');
 // ── POST /disputes ───────────────────────────────────────────────────────────
 // Buyer raises a dispute
 router.post('/', async (req, res) => {
-  const cleanReason = sanitizeText(reason);
   const { transactionId, reason, reasonCategory, evidence, raisedBy } = req.body;
+  const cleanReason = reason ? sanitizeText(reason) : reason;
 
   if (!transactionId || !reason || !raisedBy) {
     return res.status(400).json({
@@ -40,8 +40,8 @@ router.post('/', async (req, res) => {
     const dispute = await prisma.dispute.create({
       data: {
         transactionId,
-        reason,
-        reasonCategory: reasonCategory || 'OTHER',
+      reason: cleanReason,
+      reasonCategory: reasonCategory || 'OTHER',
         evidence:       evidence || null,
         raisedBy,
         status:          'OPEN',
@@ -96,12 +96,6 @@ res.status(201).json({
   disputeId: dispute.id,
   deadline:  responseDeadline
 });
-
-    res.status(201).json({
-      message:  'Dispute raised. Funds are frozen.',
-      disputeId: dispute.id,
-      deadline: responseDeadline
-    });
 
   } catch (error) {
     console.error(error);
