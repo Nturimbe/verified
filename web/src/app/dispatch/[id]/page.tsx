@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { PageTransition } from '@/components/ui/page-transition';
 import { BackButton } from '@/components/ui/back-button';
 
+
 export default function DispatchPage() {
   const { id } = useParams<{ id: string }>();
   const [tx,            setTx]           = useState<Transaction | null>(null);
@@ -25,6 +26,9 @@ export default function DispatchPage() {
   const [disputeReason, setDisputeReason] = useState('');
   const [disputing,     setDisputing]     = useState(false);
   const [disputed,      setDisputed]      = useState(false);
+  const [sellerResponseText, setSellerResponseText] = useState('');
+  const [submittingResponse, setSubmittingResponse] = useState(false);
+  const [responseSubmitted, setResponseSubmitted] = useState(false);
 
   useEffect(() => {
     api.getTransaction(id)
@@ -65,6 +69,29 @@ export default function DispatchPage() {
     }
   }
 
+  async function handleSubmitResponse() {
+  if (!sellerResponseText.trim()) {
+    toast.error('Please describe your side of the situation.');
+    return;
+  }
+  setSubmittingResponse(true);
+  try {
+    // Need the dispute ID — fetch it from transaction's disputes array
+    const openDispute = tx?.disputes?.find(d => d.status === 'OPEN');
+    if (!openDispute) {
+      toast.error('No open dispute found.');
+      return;
+    }
+    await api.submitDisputeResponse(openDispute.id, sellerResponseText.trim());
+    setResponseSubmitted(true);
+    toast.success('Response submitted successfully.');
+  } catch (err: unknown) {
+    toast.error(err instanceof Error ? err.message : 'Failed to submit response.');
+  } finally {
+    setSubmittingResponse(false);
+  }
+}
+
   if (loading) {
   return (
     <PageTransition>
@@ -75,6 +102,7 @@ export default function DispatchPage() {
     </PageTransition>
   );
 }
+
 
 if (!tx) {
   return (
@@ -113,6 +141,46 @@ if (!tx) {
       </PageTransition>
     );
   }
+
+  {tx.state === 'DISPUTED' && (
+  <Card className="shadow-card border-red-200 mt-4">
+    <CardContent className="p-5 space-y-3">
+      <div className="flex items-center gap-2">
+        <AlertTriangle className="w-4 h-4 text-red-500" />
+        <p className="font-semibold text-foreground text-sm">
+          A dispute has been raised
+        </p>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Submit your side of the story. Our team reviews all evidence
+        before making a decision.
+      </p>
+      {!responseSubmitted ? (
+        <>
+          <Textarea
+            placeholder="Explain your side of what happened..."
+            value={sellerResponseText}
+            onChange={e => setSellerResponseText(e.target.value)}
+            className="resize-none h-24 text-sm"
+          />
+          <Button
+            onClick={handleSubmitResponse}
+            disabled={submittingResponse}
+            className="w-full h-10 bg-brand-dark hover:bg-brand-darkest
+              text-white border-0 text-sm"
+          >
+            {submittingResponse ? 'Submitting...' : 'Submit My Response'}
+          </Button>
+        </>
+      ) : (
+        <p className="text-sm text-brand-main flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" />
+          Your response has been submitted. Awaiting admin review.
+        </p>
+      )}
+    </CardContent>
+  </Card>
+)}
 
   if (tx.state === 'CONFIRMED' || tx.state === 'RESOLVED') {
     return (

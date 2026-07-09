@@ -80,12 +80,14 @@ async function apiFetch<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
+  const { headers: customHeaders, ...restOptions } = options;
+
   const res = await fetch(`${API_URL}${path}`, {
+    ...restOptions,
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...customHeaders,
     },
-    ...options,
   });
 
   const contentType = res.headers.get('content-type') || '';
@@ -161,6 +163,12 @@ export const api = {
         raisedBy,
       }),
     }),
+
+    submitDisputeResponse: (disputeId: string, response: string) =>
+  apiFetch<{ message: string }>(`/disputes/${disputeId}/response`, {
+    method: 'POST',
+    body: JSON.stringify({ response }),
+  }),
 };
 
 // ── Admin API (token-gated) ──────────────────────────────────────────────────
