@@ -79,18 +79,14 @@ app.use(express.json({
   }
 }));
 
-
-// Routes
-// Raw body for Paystack webhook signature verification — must be before express.json()
-app.use('/transactions',           transactions);
-app.post('/transactions',          createTxLimit);
-app.post('/transactions/initiate-payment', paymentLimit);
-app.use('/admin/api',              adminRoutes);
-app.post('/admin/api/overview',    adminLoginLimit);
+// Routes — rate limiters applied directly to the router mount, before the route logic runs
+app.use('/transactions/initiate-payment', paymentLimit);
+app.post('/transactions', createTxLimit);
 app.use('/transactions', transactions);
 app.use('/disputes', disputes);
 app.use('/admin/api', adminRoutes);
 app.use('/admin/auth', adminAuthRoutes);
+app.post('/admin/auth/login', adminLoginLimit);
 
 // Root — serve landing page
 app.get('/', (req, res) => {
