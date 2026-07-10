@@ -12,7 +12,6 @@ function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// POST /auth/request-otp
 router.post('/request-otp', async (req, res) => {
   const { phone } = req.body;
 
@@ -44,7 +43,6 @@ router.post('/request-otp', async (req, res) => {
   }
 });
 
-// POST /auth/verify-otp
 router.post('/verify-otp', async (req, res) => {
   const { phone, code } = req.body;
 
@@ -99,7 +97,6 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-// GET /auth/me — check current session
 router.get('/me', (req, res) => {
   const token = req.cookies?.verified_session;
   if (!token) {
@@ -113,15 +110,11 @@ router.get('/me', (req, res) => {
   }
 });
 
-// POST /auth/logout
 router.post('/logout', (req, res) => {
   res.clearCookie('verified_session');
   res.json({ message: 'Logged out' });
 });
 
-module.exports = router;
-
-// Middleware other routes can use
 function requireAuth(req, res, next) {
   const token = req.cookies?.verified_session;
   if (!token) {
