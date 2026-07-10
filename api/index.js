@@ -7,10 +7,12 @@ const disputes     = require('./src/routes/disputes');
 const adminRoutes  = require('./src/routes/admin');
 const cors         = require('cors');
 const adminAuthRoutes = require('./src/routes/adminAuth');
-
+const authRoutes = require('./src/routes/auth');
+const cookieParser = require('cookie-parser');
 
 const app  = express();
 app.use(cors());
+app.use(cookieParser());
 const PORT = process.env.PORT || 3001;
 const rateLimit = require('express-rate-limit');
 
@@ -87,6 +89,7 @@ app.use('/disputes', disputes);
 app.use('/admin/api', adminRoutes);
 app.use('/admin/auth', adminAuthRoutes);
 app.post('/admin/auth/login', adminLoginLimit);
+app.use('/auth', authRoutes);
 
 // Root — serve landing page
 app.get('/', (req, res) => {
