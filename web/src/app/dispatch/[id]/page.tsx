@@ -117,70 +117,69 @@ if (!tx) {
   );
 }
 
-  if (disputed || tx.state === 'DISPUTED') {
-    return (
-      <PageTransition>
-      <div className="min-h-screen bg-background flex items-center
-        justify-center px-4">
-        <Card className="max-w-md w-full shadow-card">
-          <CardContent className="p-8 text-center">
-            <div className="w-14 h-14 bg-red-50 rounded-full flex items-center
-              justify-center mx-auto mb-4">
-              <AlertTriangle className="w-7 h-7 text-red-500" />
-            </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              Dispute In Progress
-            </h2>
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              A dispute has been raised on this transaction. Funds are frozen.
-              The Verified team will contact both parties within 48 hours.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-      </PageTransition>
-    );
-  }
+if (disputed || tx.state === 'DISPUTED') {
+  return (
+    <PageTransition>
+      <div className="min-h-screen bg-background py-10 px-4">
+        <div className="max-w-md mx-auto space-y-4">
+          <Card className="shadow-card">
+            <CardContent className="p-8 text-center">
+              <div className="w-14 h-14 bg-red-50 rounded-full flex items-center
+                justify-center mx-auto mb-4">
+                <AlertTriangle className="w-7 h-7 text-red-500" />
+              </div>
+              <h2 className="text-xl font-bold text-foreground mb-2">
+                Dispute In Progress
+              </h2>
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                A dispute has been raised on this transaction. Funds are frozen.
+                The Verified team will contact both parties within 48 hours.
+              </p>
+            </CardContent>
+          </Card>
 
-  {tx.state === 'DISPUTED' && (
-  <Card className="shadow-card border-red-200 mt-4">
-    <CardContent className="p-5 space-y-3">
-      <div className="flex items-center gap-2">
-        <AlertTriangle className="w-4 h-4 text-red-500" />
-        <p className="font-semibold text-foreground text-sm">
-          A dispute has been raised
-        </p>
+          <Card className="shadow-card border-red-200">
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <p className="font-semibold text-foreground text-sm">
+                  Submit Your Response
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Submit your side of the story. Our team reviews all evidence
+                before making a decision.
+              </p>
+              {!responseSubmitted ? (
+                <>
+                  <Textarea
+                    placeholder="Explain your side of what happened..."
+                    value={sellerResponseText}
+                    onChange={e => setSellerResponseText(e.target.value)}
+                    className="resize-none h-24 text-sm"
+                  />
+                  <Button
+                    onClick={handleSubmitResponse}
+                    disabled={submittingResponse}
+                    className="w-full h-10 bg-brand-dark hover:bg-brand-darkest
+                      text-white border-0 text-sm"
+                  >
+                    {submittingResponse ? 'Submitting...' : 'Submit My Response'}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-brand-main flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Your response has been submitted. Awaiting admin review.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        Submit your side of the story. Our team reviews all evidence
-        before making a decision.
-      </p>
-      {!responseSubmitted ? (
-        <>
-          <Textarea
-            placeholder="Explain your side of what happened..."
-            value={sellerResponseText}
-            onChange={e => setSellerResponseText(e.target.value)}
-            className="resize-none h-24 text-sm"
-          />
-          <Button
-            onClick={handleSubmitResponse}
-            disabled={submittingResponse}
-            className="w-full h-10 bg-brand-dark hover:bg-brand-darkest
-              text-white border-0 text-sm"
-          >
-            {submittingResponse ? 'Submitting...' : 'Submit My Response'}
-          </Button>
-        </>
-      ) : (
-        <p className="text-sm text-brand-main flex items-center gap-2">
-          <CheckCircle className="w-4 h-4" />
-          Your response has been submitted. Awaiting admin review.
-        </p>
-      )}
-    </CardContent>
-  </Card>
-)}
+    </PageTransition>
+  );
+}
 
   if (tx.state === 'CONFIRMED' || tx.state === 'RESOLVED') {
     return (
@@ -243,7 +242,9 @@ if (!tx) {
           <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
             Seller Dispatch
            </p>
-          <h1 className="text-2xl font-serif font-bold text-foreground"></h1>
+          <h1 className="text-2xl font-serif font-bold text-foreground">
+  {isDispatched ? 'Item Dispatched' : 'Ready to Dispatch?'}
+</h1>
         </div>
 
         <Card className="shadow-card border-border">
@@ -283,8 +284,8 @@ if (!tx) {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </CardContent>   
+          </Card>
 
         {!isDispatched ? (
           <>
