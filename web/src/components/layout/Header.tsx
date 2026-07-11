@@ -2,21 +2,36 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Menu, X, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { authApi } from '@/lib/api';
 
 const navLinks = [
   { label: 'How It Works',    href: '/how-it-works' },
-  { label: 'Dispatched', href: '/dispatch' },
+  { label: 'Dispatch',        href: '/dispatch' },
   { label: 'My Transactions', href: '/my-transactions' },
   { label: 'Track My Order',  href: '/my-order' },
 ];
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
+  const [userPhone, setUserPhone] = useState<string | null>(null);
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    authApi.me()
+      .then(data => setUserPhone(data.phone))
+      .catch(() => setUserPhone(null));
+  }, []);
+
+  async function handleLogout() {
+    await authApi.logout();
+    setUserPhone(null);
+    router.push('/');
+  }
 
   return (
     <header className="bg-brand-darkest sticky top-0 z-50 border-b border-brand-dark shadow-sm">
@@ -49,7 +64,32 @@ export function Header() {
             </Link>
           ))}
           <div className="w-px h-5 bg-green-800 mx-2" />
-          <Button asChild size="sm" className="bg-brand-amber hover:bg-amber-500 text-white border-0 font-semibold h-9">
+
+          {userPhone ? (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-xs text-green-300">
+                <User className="w-3.5 h-3.5" />
+                {userPhone}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-lg text-green-300 hover:text-brand-amber
+                  hover:bg-white/5 transition-colors"
+                aria-label="Log out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <Button asChild size="sm" variant="outline"
+              className="border-green-700 text-green-300 hover:bg-white/5
+              hover:text-brand-amber h-9">
+              <Link href="/login">Log In</Link>
+            </Button>
+          )}
+
+          <Button asChild size="sm" className="bg-brand-amber hover:bg-amber-500
+            text-white border-0 font-semibold h-9">
             <Link href="/create">Create Link</Link>
           </Button>
         </nav>
@@ -79,8 +119,27 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
+            {userPhone ? (
+              <button
+                onClick={() => { handleLogout(); setIsOpen(false); }}
+                className="px-4 py-3 text-sm text-green-200 text-left
+                  hover:text-brand-amber hover:bg-white/5 flex items-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Log Out ({userPhone})
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setIsOpen(false)}
+                className="px-4 py-3 text-sm text-green-200 hover:text-brand-amber hover:bg-white/5"
+              >
+                Log In
+              </Link>
+            )}
             <div className="px-4 py-2">
-              <Button asChild className="w-full bg-brand-amber hover:bg-amber-500 text-white border-0 font-semibold">
+              <Button asChild className="w-full bg-brand-amber hover:bg-amber-500
+                text-white border-0 font-semibold">
                 <Link href="/create" onClick={() => setIsOpen(false)}>
                   Create Link
                 </Link>

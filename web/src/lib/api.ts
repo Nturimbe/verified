@@ -228,3 +228,32 @@ export const adminApi = {
       headers: { 'x-admin-token': token },
     }),
 };
+
+// ── Auth API (session-based) ──────────────────────────────────────────────
+
+export const authApi = {
+  requestOtp: (phone: string) =>
+    apiFetch<{ message: string }>('/auth/request-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+      credentials: 'include',
+    } as RequestInit),
+
+  verifyOtp: (phone: string, code: string) =>
+    apiFetch<{ message: string; phone: string }>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ phone, code }),
+      credentials: 'include',
+    } as RequestInit),
+
+  me: () =>
+    apiFetch<{ phone: string }>('/auth/me', {
+      credentials: 'include',
+    } as RequestInit),
+
+  logout: () =>
+    apiFetch<{ message: string }>('/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    } as RequestInit),
+};
