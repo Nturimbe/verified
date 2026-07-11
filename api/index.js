@@ -5,13 +5,11 @@ const transactions = require('./src/routes/transactions');
 const pages        = require('./src/routes/pages');
 const disputes     = require('./src/routes/disputes');
 const adminRoutes  = require('./src/routes/admin');
-const cors         = require('cors');
 const adminAuthRoutes = require('./src/routes/adminAuth');
 const authRoutes = require('./src/routes/auth');
 const cookieParser = require('cookie-parser');
 
 const app  = express();
-app.use(cors());
 app.use(cookieParser());
 const PORT = process.env.PORT || 3001;
 const rateLimit = require('express-rate-limit');
