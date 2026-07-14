@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { api, Transaction } from '@/lib/api';
+import { api, authApi, Transaction } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  ShoppingBag, ArrowRight, Search,
+  ShoppingBag, ArrowRight,
   CheckCircle, Clock, Package, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -44,30 +44,44 @@ const STATE_COLORS: Record<string, string> = {
   DISPUTED:   'bg-red-50 text-red-600 border-red-200',
 };
 
+type Stage = 'checking' | 'enterPhone' | 'enterOtp' | 'loaded';
+
 function MyOrderContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const urlPhone = searchParams.get('phone') || '';
 
-  const [phone, setPhone] = useState(urlPhone);
+  const [stage, setStage]   = useState<Stage>('checking');
+  const [phone, setPhone]   = useState(urlPhone);
+  const [code, setCode]     = useState('');
   const [orders, setOrders] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [loading, setLoading]     = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
 
+  // On load: check for an existing session first
   useEffect(() => {
-    if (urlPhone && urlPhone.length >= 10) {
-      setPhone(urlPhone);
-      fetchOrders(urlPhone);
+    async function init() {
+      try {
+        const session = await authApi.me();
+        if (session.phone) {
+          setPhone(session.phone);
+          await fetchOrders(session.phone);
+          setStage('loaded');
+          return;
+        }
+      } catch {
+        // no valid session — fall through
+      }
+      setStage('enterPhone');
     }
+    init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlPhone]);
+  }, []);
 
   async function fetchOrders(searchPhone: string) {
     setLoading(true);
     try {
       const data = await api.getBuyerOrders(searchPhone);
       setOrders(data);
-      setSearched(true);
     } catch {
       toast.error('Could not load orders.');
     } finally {
@@ -75,14 +89,130 @@ function MyOrderContent() {
     }
   }
 
-  function handleSearch() {
+  async function handleSendOtp() {
     if (!phone || phone.length < 10) {
-      toast.error('Please enter your phone number.');
+      toast.error('Please enter a valid phone number.');
       return;
     }
-    router.push(`/my-order?phone=${encodeURIComponent(phone)}`);
+    setSendingOtp(true);
+    try {
+      await authApi.requestOtp(phone);
+      toast.success('Code sent! Check your SMS.');
+      setStage('enterOtp');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send code.');
+    } finally {
+      setSendingOtp(false);
+    }
   }
 
+  async function handleVerifyOtp() {
+    if (!code || code.length !== 6) {
+      toast.error('Please enter the 6-digit code.');
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      await authApi.verifyOtp(phone, code);
+      await fetchOrders(phone);
+      setStage('loaded');
+      toast.success('Verified successfully.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Incorrect code.');
+    } finally {
+      setSendingOtp(false);
+    }
+  }
+
+  if (stage === 'checking') {
+    return (
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-brand-main/30 border-t-brand-main rounded-full animate-spin" />
+        </div>
+      </PageTransition>
+    );
+  }
+
+  if (stage === 'enterPhone' || stage === 'enterOtp') {
+    return (
+      <PageTransition>
+        <div className="min-h-screen bg-background py-10 px-4">
+          <div className="max-w-sm mx-auto">
+            <BackButton />
+            <div className="mb-8">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                Buyer Portal
+              </p>
+              <h1 className="text-3xl font-serif font-bold text-foreground">
+                Track My Orders
+              </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                {stage === 'enterPhone'
+                  ? 'Enter your WhatsApp or phone number to view your orders.'
+                  : `Code sent to ${phone}`}
+              </p>
+            </div>
+
+            <Card className="shadow-card border-border">
+              <CardContent className="p-6 space-y-4">
+                {stage === 'enterPhone' ? (
+                  <>
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Your WhatsApp or Phone Number
+                    </Label>
+                    <Input
+                      type="tel"
+                      placeholder="e.g. 0241234567"
+                      value={phone}
+                      onChange={e => setPhone(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
+                      className="h-12 text-base border-border focus:border-brand-main"
+                    />
+                    <Button
+                      onClick={handleSendOtp}
+                      disabled={sendingOtp}
+                      className="w-full h-12 bg-brand-main hover:bg-brand-dark text-white font-semibold border-0"
+                    >
+                      {sendingOtp ? 'Sending...' : 'Send Verification Code'}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="6-digit code"
+                      maxLength={6}
+                      value={code}
+                      onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
+                      className="h-12 text-center text-2xl tracking-widest border-border focus:border-brand-main"
+                    />
+                    <Button
+                      onClick={handleVerifyOtp}
+                      disabled={sendingOtp}
+                      className="w-full h-12 bg-brand-main hover:bg-brand-dark text-white font-semibold border-0"
+                    >
+                      {sendingOtp ? 'Verifying...' : 'Verify & View Orders'}
+                    </Button>
+                    <button
+                      onClick={() => setStage('enterPhone')}
+                      className="w-full text-center text-sm text-muted-foreground hover:text-brand-main"
+                    >
+                      Use a different number
+                    </button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  // stage === 'loaded' — show the order list
   return (
     <PageTransition>
       <div className="min-h-screen bg-background py-10 px-4">
@@ -98,36 +228,13 @@ function MyOrderContent() {
             </h1>
           </div>
 
-          <Card className="shadow-card border-border mb-6">
-            <CardContent className="p-5 space-y-3">
-              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Your WhatsApp or Phone Number
-              </Label>
-              <div className="flex gap-2">
-                <Input
-                  type="tel"
-                  placeholder="e.g. 0241234567"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  className="h-11 text-base border-border focus:border-brand-main flex-1"
-                />
-                <Button
-                  onClick={() => handleSearch()}
-                  disabled={loading}
-                  className="h-11 px-5 bg-brand-main hover:bg-brand-dark text-white border-0"
-                >
-                  {loading ? (
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <Search className="w-4 h-4" />
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {loading && (
+            <div className="text-center py-16">
+              <div className="w-8 h-8 border-2 border-brand-main/30 border-t-brand-main rounded-full animate-spin mx-auto" />
+            </div>
+          )}
 
-          {searched && orders.length === 0 && (
+          {!loading && orders.length === 0 && (
             <div className="text-center py-16 text-muted-foreground">
               <ShoppingBag className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm">No orders found for this number.</p>
