@@ -6,7 +6,8 @@
     "dev": "next dev --port 4000",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "postinstall": "npm install lightningcss-linux-x64-gnu --no-save --force"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
