@@ -2,14 +2,14 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, Transaction } from '@/lib/api';
+import { api, authApi, Transaction } from '@/lib/api';
 import { PageTransition } from '@/components/ui/page-transition';
 import { BackButton } from '@/components/ui/back-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package, ArrowRight, Search } from 'lucide-react';
+import { Package, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const STATE_COLORS: Record<string, string> = {
@@ -21,30 +21,44 @@ const STATE_COLORS: Record<string, string> = {
   RESOLVED:   'bg-muted text-muted-foreground',
 };
 
+type Stage = 'checking' | 'enterPhone' | 'enterOtp' | 'loaded';
+
 function DispatchLookupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlMomo = searchParams.get('momo') || '';
 
-  const [momo, setMomo] = useState(urlMomo);
+  const [stage, setStage]       = useState<Stage>('checking');
+  const [momo, setMomo]         = useState(urlMomo);
+  const [code, setCode]         = useState('');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
 
   useEffect(() => {
-    if (urlMomo && urlMomo.length === 10) {
-      setMomo(urlMomo);
-      fetchTransactions(urlMomo);
+    async function init() {
+      try {
+        const session = await authApi.me();
+        if (session.phone) {
+          setMomo(session.phone);
+          await fetchTransactions(session.phone);
+          setStage('loaded');
+          return;
+        }
+      } catch {
+        // no valid session — fall through
+      }
+      setStage('enterPhone');
     }
+    init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlMomo]);
+  }, []);
 
   async function fetchTransactions(searchMomo: string) {
     setLoading(true);
     try {
       const data = await api.getSellerTransactions(searchMomo);
       setTransactions(data);
-      setSearched(true);
     } catch {
       toast.error('Could not load transactions.');
     } finally {
@@ -52,12 +66,39 @@ function DispatchLookupContent() {
     }
   }
 
-  function handleSearch() {
+  async function handleSendOtp() {
     if (!momo || momo.length < 10) {
       toast.error('Enter your 10-digit MoMo number.');
       return;
     }
-    router.push(`/dispatch?momo=${momo}`);
+    setSendingOtp(true);
+    try {
+      await authApi.requestOtp(momo);
+      toast.success('Code sent! Check your SMS.');
+      setStage('enterOtp');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to send code.');
+    } finally {
+      setSendingOtp(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    if (!code || code.length !== 6) {
+      toast.error('Please enter the 6-digit code.');
+      return;
+    }
+    setSendingOtp(true);
+    try {
+      await authApi.verifyOtp(momo, code);
+      await fetchTransactions(momo);
+      setStage('loaded');
+      toast.success('Verified successfully.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Incorrect code.');
+    } finally {
+      setSendingOtp(false);
+    }
   }
 
   const actionable = transactions.filter(
@@ -67,6 +108,93 @@ function DispatchLookupContent() {
     tx => tx.state !== 'FUNDED' && tx.state !== 'DISPATCHED'
   );
 
+  if (stage === 'checking') {
+    return (
+      <PageTransition>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-brand-main/30 border-t-brand-main rounded-full animate-spin" />
+        </div>
+      </PageTransition>
+    );
+  }
+
+  if (stage === 'enterPhone' || stage === 'enterOtp') {
+    return (
+      <PageTransition>
+        <div className="min-h-screen bg-background py-10 px-4">
+          <div className="max-w-sm mx-auto">
+            <BackButton />
+            <div className="mb-8">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                Seller Portal
+              </p>
+              <h1 className="text-3xl font-serif font-bold text-foreground">
+                Dispatch a Transaction
+              </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                {stage === 'enterPhone'
+                  ? 'Enter your MoMo number to see transactions ready for dispatch.'
+                  : `Code sent to ${momo}`}
+              </p>
+            </div>
+
+            <Card className="shadow-card border-border">
+              <CardContent className="p-6 space-y-4">
+                {stage === 'enterPhone' ? (
+                  <>
+                    <Input
+                      type="tel"
+                      placeholder="Your MoMo number e.g. 0551234567"
+                      maxLength={10}
+                      value={momo}
+                      onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
+                      className="h-12 text-base border-border focus:border-brand-main"
+                    />
+                    <Button
+                      onClick={handleSendOtp}
+                      disabled={sendingOtp}
+                      className="w-full h-12 bg-brand-main hover:bg-brand-dark text-white font-semibold border-0"
+                    >
+                      {sendingOtp ? 'Sending...' : 'Send Verification Code'}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="6-digit code"
+                      maxLength={6}
+                      value={code}
+                      onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={e => e.key === 'Enter' && handleVerifyOtp()}
+                      className="h-12 text-center text-2xl tracking-widest border-border focus:border-brand-main"
+                    />
+                    <Button
+                      onClick={handleVerifyOtp}
+                      disabled={sendingOtp}
+                      className="w-full h-12 bg-brand-main hover:bg-brand-dark text-white font-semibold border-0"
+                    >
+                      {sendingOtp ? 'Verifying...' : 'Verify & View Transactions'}
+                    </Button>
+                    <button
+                      onClick={() => setStage('enterPhone')}
+                      className="w-full text-center text-sm text-muted-foreground hover:text-brand-main"
+                    >
+                      Use a different number
+                    </button>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  // stage === 'loaded'
   return (
     <PageTransition>
       <div className="min-h-screen bg-background py-10 px-4">
@@ -80,38 +208,15 @@ function DispatchLookupContent() {
             <h1 className="text-3xl font-serif font-bold text-foreground">
               Dispatch a Transaction
             </h1>
-            <p className="text-muted-foreground text-sm mt-2">
-              Enter your MoMo number to see transactions ready for dispatch.
-            </p>
           </div>
 
-          <Card className="shadow-card border-border mb-6">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  type="tel"
-                  placeholder="Your MoMo number e.g. 0551234567"
-                  maxLength={10}
-                  value={momo}
-                  onChange={e => setMomo(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  className="h-11 text-base border-border focus:border-brand-main flex-1"
-                />
-                <Button
-                  onClick={() => handleSearch()}
-                  disabled={loading}
-                  className="h-11 px-5 bg-brand-main hover:bg-brand-dark text-white border-0"
-                >
-                  {loading
-                    ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    : <Search className="w-4 h-4" />
-                  }
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {loading && (
+            <div className="text-center py-10">
+              <div className="w-8 h-8 border-2 border-brand-main/30 border-t-brand-main rounded-full animate-spin mx-auto" />
+            </div>
+          )}
 
-          {searched && actionable.length > 0 && (
+          {!loading && actionable.length > 0 && (
             <div className="mb-6">
               <p className="text-xs font-semibold uppercase tracking-wide text-brand-main mb-3">
                 Needs Action ({actionable.length})
@@ -154,7 +259,7 @@ function DispatchLookupContent() {
             </div>
           )}
 
-          {searched && actionable.length === 0 && (
+          {!loading && actionable.length === 0 && (
             <div className="text-center py-10 text-muted-foreground mb-6">
               <Package className="w-10 h-10 mx-auto mb-3 opacity-30" />
               <p className="text-sm font-medium">No transactions need action.</p>
@@ -164,7 +269,7 @@ function DispatchLookupContent() {
             </div>
           )}
 
-          {searched && others.length > 0 && (
+          {!loading && others.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
                 Other Transactions ({others.length})
