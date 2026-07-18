@@ -47,8 +47,7 @@ app.use((req, res, next) => {
   const origin = req.headers.origin;
   const isAllowed = origin && (
     allowedOrigins.includes(origin) ||
-    /^https:\/\/verified-api-.*\.vercel\.app$/.test(origin) ||
-    /^https:\/\/verified2\.vercel\.app$/.test(origin)
+    /^https:\/\/verified[a-z0-9-]*\.vercel\.app$/.test(origin)
   );
 
   if (isAllowed) {
