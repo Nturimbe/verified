@@ -169,7 +169,17 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ response }),
   }),
+
+  getSellerStats: (momo: string) =>
+    apiFetch<{
+      totalTransactions: number;
+      completionRate: number;
+      disputeRate: number;
+      memberSince: string | null;
+    }>(`/transactions/seller-stats/${momo}`),
 };
+  
+
 
 // ── Admin API (token-gated) ──────────────────────────────────────────────────
 
