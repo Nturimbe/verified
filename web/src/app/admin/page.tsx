@@ -88,6 +88,7 @@ export default function AdminPage() {
   const [reconcile,    setReconcile]    = useState<ReconcileData | null>(null);
   const [txFilter,     setTxFilter]     = useState('');
   const [dispFilter,   setDispFilter]   = useState('OPEN');
+  
 
   async function handleLogin() {
     if (!password) { toast.error('Enter the admin password.'); return; }
@@ -569,6 +570,7 @@ function AdminDisputeCard({ dispute, token }: { dispute: DisputeRecord; token: s
   const [approvedBy, setApprovedBy] = useState('');
   const [saving,     setSaving]     = useState(false);
   const [resolved,   setResolved]   = useState(false);
+  const [partialAmount, setPartialAmount] = useState('');
 
   const tx        = dispute.transaction;
   const needsDual = tx.amount >= 500;
@@ -576,6 +578,10 @@ function AdminDisputeCard({ dispute, token }: { dispute: DisputeRecord; token: s
   async function handleResolve() {
     if (!decision || !reason.trim() || !decidedBy.trim()) {
       toast.error('Fill in all required fields.');
+      return;
+    }
+    if (decision === 'PARTIAL_SPLIT' && (!partialAmount || parseFloat(partialAmount) <= 0)) {
+      toast.error('Enter a valid split amount.');
       return;
     }
     if (needsDual && !approvedBy.trim()) {
@@ -590,7 +596,8 @@ function AdminDisputeCard({ dispute, token }: { dispute: DisputeRecord; token: s
     try {
       await adminApi.resolveDispute(
         token, dispute.id, decision, reason, decidedBy,
-        approvedBy || undefined
+        approvedBy || undefined,
+        decision === 'PARTIAL_SPLIT' ? parseFloat(partialAmount) : undefined
       );
       setResolved(true);
       toast.success('Dispute resolved.');
@@ -670,19 +677,31 @@ function AdminDisputeCard({ dispute, token }: { dispute: DisputeRecord; token: s
             <Separator />
             <div className="space-y-3">
               <div className="flex gap-2">
-                {['RELEASE_TO_SELLER', 'REFUND_TO_BUYER'].map(d => (
+                {['RELEASE_TO_SELLER', 'PARTIAL_SPLIT', 'REFUND_TO_BUYER'].map(d => (
                   <button key={d}
                     onClick={() => setDecision(d)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-medium
-                      border transition-colors
+                    className={`flex-1 py-2 rounded-lg text-xs font-medium border transition-colors
                       ${decision === d
                         ? 'bg-brand-main text-white border-brand-main'
                         : 'bg-background border-border hover:border-brand-main'
                       }`}>
-                    {d === 'RELEASE_TO_SELLER' ? 'Release to Seller' : 'Refund to Buyer'}
+                    {d === 'RELEASE_TO_SELLER' ? 'Release'
+                      : d === 'PARTIAL_SPLIT' ? 'Split'
+                      : 'Refund'}
                   </button>
                 ))}
               </div>
+
+              {decision === 'PARTIAL_SPLIT' && (
+                <Input
+                  type="number"
+                  placeholder={`Amount to seller (max GHS ${tx.amount})`}
+                  value={partialAmount}
+                  onChange={e => setPartialAmount(e.target.value)}
+                  className="h-9 text-sm"
+                />
+              )}
+
               <Textarea
                 placeholder="Decision reason (required — permanently logged)"
                 value={reason}

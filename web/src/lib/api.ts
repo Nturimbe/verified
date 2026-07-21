@@ -198,19 +198,20 @@ export const adminApi = {
     }),
 
   resolveDispute: (
-    token: string,
-    disputeId: string,
-    decision: string,
-    decisionReason: string,
-    decidedBy: string,
-    approvedBy?: string
-  ) =>
-    apiFetch<{ message: string }>(`/disputes/${disputeId}/resolve`, {
-      method:  'POST',
-      headers: { 'x-admin-token': token },
-      body:    JSON.stringify({ decision, decisionReason, decidedBy, approvedBy }),
-    }),
-
+  token: string,
+  disputeId: string,
+  decision: string,
+  decisionReason: string,
+  decidedBy: string,
+  approvedBy?: string,
+  partialAmount?: number
+) =>
+  apiFetch<{ message: string }>(`/disputes/${disputeId}/resolve`, {
+    method:  'POST',
+    headers: { 'x-admin-token': token },
+    body:    JSON.stringify({ decision, decisionReason, decidedBy, approvedBy, partialAmount }),
+  }),
+  
   changeTransactionState: (token: string, id: string, newState: string, reason: string) =>
     apiFetch<{ message: string }>(`/admin/api/transactions/${id}/state`, {
       method:  'PATCH',
@@ -256,4 +257,14 @@ export const authApi = {
       method: 'POST',
       credentials: 'include',
     } as RequestInit),
+
+    getSellerStats: (momo: string) =>
+  apiFetch<{
+    totalTransactions: number;
+    completionRate: number;
+    disputeRate: number;
+    memberSince: string | null;
+  }>(`/transactions/seller-stats/${momo}`),
 };
+
+

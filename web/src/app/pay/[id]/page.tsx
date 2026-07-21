@@ -36,6 +36,10 @@ export default function PayPage() {
       .finally(() => setLoading(false));
   }, [id]);
 
+  if (tx?.sellerMomo) {
+  api.getSellerStats(tx.sellerMomo).then(setSellerStats).catch(() => {});
+}
+
   function handleContact(val: string) {
     setContact(val);
     const isEmail = val.includes('@');
@@ -99,7 +103,12 @@ if (notFound || !tx) {
 // Main render
   const alreadyPaid = tx.state !== 'CREATED';
   const maskedMomo  = tx.sellerMomo.slice(0, 3) + '****' + tx.sellerMomo.slice(-4);
-
+  const [sellerStats, setSellerStats] = useState<{
+  totalTransactions: number;
+  completionRate: number;
+  disputeRate: number;
+  memberSince: string | null;
+} | null>(null);
 
   return (
     <PageTransition>
@@ -146,6 +155,23 @@ if (notFound || !tx) {
                 </div>
               </div>
             </div>
+
+            {sellerStats && sellerStats.totalTransactions > 0 && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground bg-muted rounded-lg p-3">
+                <div className="flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5 text-brand-main" />
+                  {sellerStats.totalTransactions} transaction{sellerStats.totalTransactions !== 1 ? 's' : ''}
+                </div>
+                <div className="w-px h-3 bg-border" />
+                <div>{sellerStats.completionRate}% completed</div>
+                {sellerStats.memberSince && (
+                  <>
+                    <div className="w-px h-3 bg-border" />
+                    <div>Since {new Date(sellerStats.memberSince).getFullYear()}</div>
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="bg-brand-light border border-brand-main/20
               rounded-xl p-4">
