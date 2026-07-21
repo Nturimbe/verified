@@ -4,9 +4,9 @@ const prisma  = require('../db');
 const { sendSMS, messages } = require('../services/sms');
 const { sendEmail, emailTemplates } = require('../services/email');
 const { sanitizeText } = require('../utils/sanitize');
+const { recordMovement } = require('../services/ledger');
 
 // ── POST /disputes ───────────────────────────────────────────────────────────
-// Buyer raises a dispute
 router.post('/', async (req, res) => {
   const { transactionId, reason, reasonCategory, evidence, raisedBy } = req.body;
   const cleanReason = reason ? sanitizeText(reason) : reason;
@@ -32,40 +32,35 @@ router.post('/', async (req, res) => {
       });
     }
 
-    // Set 48-hour response deadline for seller
     const responseDeadline = new Date();
     responseDeadline.setHours(responseDeadline.getHours() + 48);
 
-    // Create dispute
     const dispute = await prisma.dispute.create({
       data: {
         transactionId,
-      reason: cleanReason,
-      reasonCategory: reasonCategory || 'OTHER',
-        evidence:       evidence || null,
+        reason: cleanReason,
+        reasonCategory: reasonCategory || 'OTHER',
+        evidence: evidence || null,
         raisedBy,
-        status:          'OPEN',
+        status: 'OPEN',
         responseDeadline
       }
     });
 
-    // Log the action
     await prisma.disputeAuditLog.create({
       data: {
-        disputeId:   dispute.id,
-        action:      'DISPUTE_OPENED',
+        disputeId: dispute.id,
+        action: 'DISPUTE_OPENED',
         performedBy: raisedBy,
-        note:        `Reason: ${reason}`
+        note: `Reason: ${reason}`
       }
     });
 
-    // Move transaction to DISPUTED
     await prisma.transaction.update({
       where: { id: transactionId },
-      data:  { state: 'DISPUTED' }
+      data: { state: 'DISPUTED' }
     });
 
-    // Notify both parties
     if (transaction.sellerMomo) {
       await sendSMS(
         transaction.sellerMomo,
@@ -81,21 +76,19 @@ router.post('/', async (req, res) => {
       );
     }
 
-    // Email buyer if they have a real email address
-if (transaction.buyerEmail &&
-    !transaction.buyerEmail.includes('@verified.gh')) {
-  const tpl = emailTemplates.disputeRaised({
-    itemName:  transaction.itemName,
-    disputeId: dispute.id
-  });
-  await sendEmail({ to: transaction.buyerEmail, ...tpl });
-}
+    if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {
+      const tpl = emailTemplates.disputeRaised({
+        itemName: transaction.itemName,
+        disputeId: dispute.id
+      });
+      await sendEmail({ to: transaction.buyerEmail, ...tpl });
+    }
 
-res.status(201).json({
-  message:   'Dispute raised. Funds are frozen.',
-  disputeId: dispute.id,
-  deadline:  responseDeadline
-});
+    res.status(201).json({
+      message: 'Dispute raised. Funds are frozen.',
+      disputeId: dispute.id,
+      deadline: responseDeadline
+    });
 
   } catch (error) {
     console.error(error);
@@ -104,7 +97,6 @@ res.status(201).json({
 });
 
 // ── POST /disputes/:id/response ──────────────────────────────────────────────
-// Seller submits their response
 router.post('/:id/response', async (req, res) => {
   const { response } = req.body;
 
@@ -114,7 +106,7 @@ router.post('/:id/response', async (req, res) => {
 
   try {
     const dispute = await prisma.dispute.findUnique({
-      where:   { id: req.params.id },
+      where: { id: req.params.id },
       include: { transaction: true }
     });
 
@@ -128,15 +120,15 @@ router.post('/:id/response', async (req, res) => {
 
     await prisma.dispute.update({
       where: { id: req.params.id },
-      data:  { sellerResponse: response }
+      data: { sellerResponse: response }
     });
 
     await prisma.disputeAuditLog.create({
       data: {
-        disputeId:   dispute.id,
-        action:      'SELLER_RESPONDED',
+        disputeId: dispute.id,
+        action: 'SELLER_RESPONDED',
         performedBy: dispute.transaction.sellerMomo,
-        note:        response
+        note: response
       }
     });
 
@@ -149,14 +141,13 @@ router.post('/:id/response', async (req, res) => {
 });
 
 // ── GET /disputes ────────────────────────────────────────────────────────────
-// Admin — list all open disputes
 router.get('/', async (req, res) => {
   try {
     const disputes = await prisma.dispute.findMany({
-      where:   { status: 'OPEN' },
+      where: { status: 'OPEN' },
       include: {
         transaction: { include: { ledgerEntries: true } },
-        auditLogs:   { orderBy: { createdAt: 'asc' } }
+        auditLogs: { orderBy: { createdAt: 'asc' } }
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -170,14 +161,13 @@ router.get('/', async (req, res) => {
 });
 
 // ── GET /disputes/:id ────────────────────────────────────────────────────────
-// Admin — view a single dispute with full context
 router.get('/:id', async (req, res) => {
   try {
     const dispute = await prisma.dispute.findUnique({
-      where:   { id: req.params.id },
+      where: { id: req.params.id },
       include: {
         transaction: { include: { ledgerEntries: true } },
-        auditLogs:   { orderBy: { createdAt: 'asc' } }
+        auditLogs: { orderBy: { createdAt: 'asc' } }
       }
     });
 
@@ -194,9 +184,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── POST /disputes/:id/resolve ───────────────────────────────────────────────
-// Admin — resolve a dispute
 router.post('/:id/resolve', async (req, res) => {
-  const { decision, decisionReason, decidedBy, approvedBy } = req.body;
+  const { decision, decisionReason, decidedBy, approvedBy, partialAmount } = req.body;
 
   if (!decision || !decisionReason || !decidedBy) {
     return res.status(400).json({
@@ -204,15 +193,19 @@ router.post('/:id/resolve', async (req, res) => {
     });
   }
 
-  if (!['RELEASE_TO_SELLER', 'REFUND_TO_BUYER'].includes(decision)) {
+  if (!['RELEASE_TO_SELLER', 'REFUND_TO_BUYER', 'PARTIAL_SPLIT'].includes(decision)) {
     return res.status(400).json({
-      error: 'decision must be RELEASE_TO_SELLER or REFUND_TO_BUYER'
+      error: 'decision must be RELEASE_TO_SELLER, REFUND_TO_BUYER, or PARTIAL_SPLIT'
     });
+  }
+
+  if (decision === 'PARTIAL_SPLIT' && (!partialAmount || partialAmount <= 0)) {
+    return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLIT' });
   }
 
   try {
     const dispute = await prisma.dispute.findUnique({
-      where:   { id: req.params.id },
+      where: { id: req.params.id },
       include: { transaction: true }
     });
 
@@ -226,7 +219,6 @@ router.post('/:id/resolve', async (req, res) => {
 
     const transaction = dispute.transaction;
 
-    // Dual approval required for transactions above GHS 500
     if (transaction.amount >= 500 && !approvedBy) {
       return res.status(400).json({
         error: `Transactions above GHS 500 require a second admin approval. Provide approvedBy.`
@@ -239,36 +231,62 @@ router.post('/:id/resolve', async (req, res) => {
       });
     }
 
-    // Update dispute
+    if (decision === 'PARTIAL_SPLIT') {
+      const sellerAmount = parseFloat(partialAmount);
+      const buyerRefund = transaction.amount - sellerAmount;
+
+      await recordMovement({
+        transactionId: transaction.id,
+        fromAccount: 'VERIFIED_ESCROW',
+        toAccount: 'SELLER_MOMO',
+        amount: sellerAmount,
+        note: 'Partial dispute resolution: seller portion'
+      });
+
+      await recordMovement({
+        transactionId: transaction.id,
+        fromAccount: 'VERIFIED_ESCROW',
+        toAccount: 'BUYER_REFUND',
+        amount: buyerRefund,
+        note: 'Partial dispute resolution: buyer refund'
+      });
+
+      if (transaction.sellerMomo) {
+        await sendSMS(transaction.sellerMomo,
+          `Verified: Dispute resolved with partial split. GHS ${sellerAmount} released to your MoMo.`);
+      }
+      if (transaction.buyerPhone) {
+        await sendSMS(transaction.buyerPhone,
+          `Verified: Dispute resolved with partial split. GHS ${buyerRefund} refunded to you.`);
+      }
+    }
+
     await prisma.dispute.update({
       where: { id: req.params.id },
       data: {
-        status:         'RESOLVED',
+        status: 'RESOLVED',
         decision,
         decisionReason,
         decidedBy,
-        approvedBy:     approvedBy || null,
-        decidedAt:      new Date()
+        approvedBy: approvedBy || null,
+        decidedAt: new Date()
       }
     });
 
-    // Audit log
     await prisma.disputeAuditLog.create({
       data: {
-        disputeId:   dispute.id,
-        action:      `RESOLVED_${decision}`,
+        disputeId: dispute.id,
+        action: `RESOLVED_${decision}`,
         performedBy: decidedBy,
-        note:        `${decisionReason}${approvedBy ? ` | Approved by: ${approvedBy}` : ''}`
+        note: `${decisionReason}${approvedBy ? ` | Approved by: ${approvedBy}` : ''}`
       }
     });
 
-    // Move transaction to RESOLVED
     await prisma.transaction.update({
       where: { id: transaction.id },
-      data:  { state: 'RESOLVED' }
+      data: { state: 'RESOLVED' }
     });
 
-    // Notify both parties of outcome
     if (decision === 'RELEASE_TO_SELLER') {
       if (transaction.sellerMomo) {
         await sendSMS(
@@ -300,7 +318,7 @@ router.post('/:id/resolve', async (req, res) => {
     }
 
     res.json({
-      message:  `Dispute resolved. Decision: ${decision}`,
+      message: `Dispute resolved. Decision: ${decision}`,
       disputeId: dispute.id,
       decision,
       decidedAt: new Date()

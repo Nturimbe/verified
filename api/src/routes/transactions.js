@@ -527,4 +527,39 @@ router.get('/seller/:momo', async (req, res) => {
   }
 });
 
+// ── GET /transactions/seller-stats/:momo ─────────────────────────────────────
+router.get('/seller-stats/:momo', async (req, res) => {
+  try {
+    const momo = req.params.momo;
+
+    const all = await prisma.transaction.findMany({
+      where: { sellerMomo: momo },
+      select: { state: true, createdAt: true }
+    });
+
+    const total      = all.length;
+    const resolved   = all.filter(t => t.state === 'RESOLVED').length;
+    const disputed   = all.filter(t => t.state === 'DISPUTED').length;
+    const completionRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
+    const disputeRate    = total > 0 ? Math.round((disputed / total) * 100) : 0;
+
+    const firstTx = all.sort((a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )[0];
+
+    const memberSince = firstTx ? firstTx.createdAt : null;
+
+    res.json({
+      totalTransactions: total,
+      completionRate,
+      disputeRate,
+      memberSince
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch seller stats' });
+  }
+});
+
 module.exports = router;
