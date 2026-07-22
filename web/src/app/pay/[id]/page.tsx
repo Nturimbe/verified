@@ -23,22 +23,30 @@ const STATE_MESSAGES: Record<string, string> = {
 export default function PayPage() {
   const { id } = useParams<{ id: string }>();
   const [tx,       setTx]      = useState<Transaction | null>(null);
-  const [loading,  setLoading]  = useState(true);
-  const [contact,  setContact]  = useState('');
-  const [hint,     setHint]     = useState('');
-  const [paying,   setPaying]   = useState(false);
-  const [notFound, setNotFound] = useState(false);
+const [loading,  setLoading]  = useState(true);
+const [contact,  setContact]  = useState('');
+const [hint,     setHint]     = useState('');
+const [paying,   setPaying]   = useState(false);
+const [notFound, setNotFound] = useState(false);
+const [sellerStats, setSellerStats] = useState<{
+  totalTransactions: number;
+  completionRate: number;
+  disputeRate: number;
+  memberSince: string | null;
+} | null>(null);
 
-  useEffect(() => {
-    api.getTransaction(id)
-      .then(setTx)
-      .catch(() => setNotFound(true))
-      .finally(() => setLoading(false));
-  }, [id]);
+useEffect(() => {
+  api.getTransaction(id)
+    .then(setTx)
+    .catch(() => setNotFound(true))
+    .finally(() => setLoading(false));
+}, [id]);
 
+useEffect(() => {
   if (tx?.sellerMomo) {
-  api.getSellerStats(tx.sellerMomo).then(setSellerStats).catch(() => {});
-}
+    api.getSellerStats(tx.sellerMomo).then(setSellerStats).catch(() => {});
+  }
+}, [tx?.sellerMomo]);
 
   function handleContact(val: string) {
     setContact(val);
@@ -101,14 +109,9 @@ if (notFound || !tx) {
 }
 
 // Main render
+  // Main render
   const alreadyPaid = tx.state !== 'CREATED';
   const maskedMomo  = tx.sellerMomo.slice(0, 3) + '****' + tx.sellerMomo.slice(-4);
-  const [sellerStats, setSellerStats] = useState<{
-  totalTransactions: number;
-  completionRate: number;
-  disputeRate: number;
-  memberSince: string | null;
-} | null>(null);
 
   return (
     <PageTransition>
