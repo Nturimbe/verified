@@ -5,7 +5,8 @@ const { sanitizeText }   = require('../utils/sanitize');
 const { transition }     = require('../services/stateMachine');
 const { recordMovement } = require('../services/ledger');
 const { initializePayment, verifyPayment, mockTransfer } = require('../services/paystack');
-const { sendSMS, messages }          = require('../services/sms');
+const { sendSMS, messages } = require('../services/sms');
+const { createNotification } = require('../services/notify');
 const { sendEmail, emailTemplates }  = require('../services/email');
 
 const USE_MOCK_TRANSFER = true;
@@ -247,7 +248,6 @@ router.patch('/:id/state', async (req, res) => {
     transition(transaction.state, newState);
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
-
     if (newState === 'FUNDED') {
       await recordMovement({
         transactionId: transaction.id,
@@ -263,6 +263,13 @@ router.patch('/:id/state', async (req, res) => {
           transaction.sellerMomo,
           messages.FUNDED(transaction.itemName, transaction.amount, dispatchUrl)
         );
+        await createNotification({
+          phone: transaction.sellerMomo,
+          title: 'Payment Received',
+          message: `Funds secured for "${transaction.itemName}". Ready to dispatch.`,
+          type: 'SUCCESS',
+          link: `/dispatch/${transaction.id}`
+        });
       }
     }
 
@@ -272,6 +279,13 @@ router.patch('/:id/state', async (req, res) => {
 
       if (buyerNumber) {
         await sendSMS(buyerNumber, messages.DISPATCHED(transaction.itemName, confirmUrl));
+        await createNotification({
+          phone: buyerNumber,
+          title: 'Item Dispatched',
+          message: `"${transaction.itemName}" is on the way. Confirm receipt once it arrives.`,
+          type: 'INFO',
+          link: `/confirm/${transaction.id}`
+        });
       }
 
       if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {

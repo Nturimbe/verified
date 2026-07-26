@@ -83,6 +83,8 @@ app.use('/transactions/initiate-payment', paymentLimit);
 app.post('/transactions', createTxLimit);
 app.use('/transactions', transactions);
 app.use('/disputes', disputes);
+app.use('/notifications', require('./src/routes/notifications'));
+app.use('/receipts', require('./src/routes/receipts'));
 app.use('/admin/api', adminRoutes);
 app.use('/admin/auth', adminAuthRoutes);
 app.post('/admin/auth/login', adminLoginLimit);

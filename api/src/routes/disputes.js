@@ -5,6 +5,7 @@ const { sendSMS, messages } = require('../services/sms');
 const { sendEmail, emailTemplates } = require('../services/email');
 const { sanitizeText } = require('../utils/sanitize');
 const { recordMovement } = require('../services/ledger');
+const { createNotification } = require('../services/notify');
 
 // ── POST /disputes ───────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
@@ -67,6 +68,13 @@ router.post('/', async (req, res) => {
         `Verified DISPUTE: A dispute has been raised on "${transaction.itemName}". ` +
         `Please respond within 48 hours. Dispute ID: ${dispute.id.split('-')[0]}`
       );
+      await createNotification({
+        phone: transaction.sellerMomo,
+        title: 'Dispute Raised',
+        message: `A dispute was raised on "${transaction.itemName}". Respond within 48 hours.`,
+        type: 'DISPUTE',
+        link: `/dispatch/${transaction.id}`
+      });
     }
     if (transaction.buyerPhone) {
       await sendSMS(
@@ -74,6 +82,13 @@ router.post('/', async (req, res) => {
         `Verified: Your dispute for "${transaction.itemName}" has been received. ` +
         `Reference: ${dispute.id.split('-')[0]}. Our team reviews within 48 hours.`
       );
+      await createNotification({
+        phone: transaction.buyerPhone,
+        title: 'Dispute Received',
+        message: `Your dispute for "${transaction.itemName}" is under review.`,
+        type: 'DISPUTE',
+        link: `/confirm/${transaction.id}`
+      });
     }
 
     if (transaction.buyerEmail && !transaction.buyerEmail.includes('@verified.gh')) {

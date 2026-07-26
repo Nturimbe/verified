@@ -91,3 +91,16 @@ model OtpRequest {
 
   @@index([phone])
 }
+
+model Notification {
+  id          String   @id @default(uuid())
+  phone       String
+  title       String
+  message     String
+  type        String   @default("INFO") // INFO, SUCCESS, WARNING, DISPUTE
+  read        Boolean  @default(false)
+  link        String?
+  createdAt   DateTime @default(now())
+
+  @@index([phone])
+}
