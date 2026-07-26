@@ -6,7 +6,8 @@ import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { authApi } from '@/lib/api';
+import { authApi, api } from '@/lib/api';
+import { Bell } from 'lucide-react';
 
 const navLinks = [
   { label: 'How It Works',    href: '/how-it-works' },
@@ -18,6 +19,10 @@ const navLinks = [
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [userPhone, setUserPhone] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string; title: string; message: string; read: boolean; link: string | null; createdAt: string;
+  }>>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -26,6 +31,14 @@ export function Header() {
       .then(data => setUserPhone(data.phone))
       .catch(() => setUserPhone(null));
   }, []);
+
+  useEffect(() => {
+    if (userPhone) {
+      api.getNotifications(userPhone).then(setNotifications).catch(() => {});
+    }
+  }, [userPhone]);
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   async function handleLogout() {
     await authApi.logout();
@@ -67,6 +80,34 @@ export function Header() {
 
           {userPhone ? (
             <div className="flex items-center gap-2">
+              <div className="relative">
+                <button onClick={() => setShowNotifs(!showNotifs)}
+                  className="p-2 rounded-lg text-green-300 hover:text-brand-amber relative">
+                  <Bell className="w-4 h-4" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-brand-amber text-white
+                      text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+                {showNotifs && (
+                  <div className="absolute right-0 top-12 w-80 bg-white rounded-xl shadow-lg
+                    border border-border max-h-96 overflow-y-auto z-50">
+                    {notifications.length === 0 ? (
+                      <p className="p-4 text-sm text-muted-foreground text-center">No notifications yet.</p>
+                    ) : notifications.map(n => (
+                      <Link key={n.id} href={n.link || '#'}
+                        onClick={() => { api.markNotificationRead(n.id); setShowNotifs(false); }}
+                        className={`block p-3 border-b border-border last:border-0 hover:bg-muted
+                          ${!n.read ? 'bg-brand-light' : ''}`}>
+                        <p className="text-sm font-semibold text-foreground">{n.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
               <span className="flex items-center gap-1.5 text-xs text-green-300">
                 <User className="w-3.5 h-3.5" />
                 {userPhone}

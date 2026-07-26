@@ -177,6 +177,18 @@ export const api = {
       disputeRate: number;
       memberSince: string | null;
     }>(`/transactions/seller-stats/${momo}`),
+
+  getNotifications: (phone: string) =>
+    apiFetch<Array<{
+      id: string; title: string; message: string;
+      type: string; read: boolean; link: string | null; createdAt: string;
+    }>>(`/notifications/${phone}`),
+
+  markNotificationRead: (id: string) =>
+    apiFetch<{ message: string }>(`/notifications/${id}/read`, { method: 'PATCH' }),
+
+  getReceiptUrl: (transactionId: string) =>
+    `${API_URL}/receipts/${transactionId}`,
 };
   
 

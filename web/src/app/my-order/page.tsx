@@ -280,6 +280,18 @@ function MyOrderContent() {
                         </Link>
                       </div>
                     )}
+                    {order.state === 'RESOLVED' && (
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <a
+                          href={api.getReceiptUrl(order.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-brand-main hover:underline flex items-center gap-1"
+                        >
+                          Download Receipt
+                        </a>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
