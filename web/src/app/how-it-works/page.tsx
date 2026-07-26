@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { PageTransition } from '@/components/ui/page-transition';
 import { BackButton } from '@/components/ui/back-button';
+import { RequestLinkButton } from '@/components/RequestLinkButton';
 import { Button } from '@/components/ui/button';
 import {
   Link2, CreditCard, Package, CheckCircle,
@@ -144,25 +145,20 @@ export default function HowItWorksPage() {
       <div className="min-h-screen bg-background">
 
         {/* Header */}
-        <section className="bg-brand-dark py-14 px-4">
-          <div className="max-w-2xl mx-auto">
-            <BackButton />
-            <p className="text-xs text-green-400 uppercase tracking-widest
-              font-medium mb-3">
-              Platform Guide
-            </p>
-            <h1 className="text-4xl font-serif font-bold text-white mb-4">
-              How Verified Works
-            </h1>
-            <p className="text-green-300 text-lg">
-              Safe trading in four simple steps.
-            </p>
-          </div>
-        </section>
+        https://verified-web.onrender.com/pay/4f70b7a0-39c2-49e5-8877-b58664c12fd8
 
         {/* Role toggle */}
         <div className="sticky top-16 z-10 bg-background border-b border-border">
-          <div className="max-w-2xl mx-auto px-4 flex">
+          <div className="
+          
+          
+          
+          
+          
+          
+          
+          
+          max-w-2xl mx-auto px-4 flex">
             {(['seller', 'buyer'] as const).map(r => (
               <button
                 key={r}
@@ -423,14 +419,17 @@ export default function HowItWorksPage() {
             <p className="text-green-300 mb-8 text-sm">
               Create your first secure payment link in under a minute.
             </p>
-            <Button asChild
-              className="bg-brand-amber hover:bg-amber-500 text-white
-              border-0 px-10 h-12 font-semibold">
-              <Link href="/create">
-                Create a Link
-                <ArrowRight className="ml-2 w-4 h-4" />
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild
+                className="bg-brand-amber hover:bg-amber-500 text-white
+                border-0 px-10 h-12 font-semibold">
+                <Link href="/create">
+                  Create a Link
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Link>
+              </Button>
+              <RequestLinkButton />
+            </div>
           </motion.div>
         </section>
 

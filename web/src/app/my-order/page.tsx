@@ -16,6 +16,8 @@ import {
 import { toast } from 'sonner';
 import { PageTransition } from '@/components/ui/page-transition';
 import { BackButton } from '@/components/ui/back-button';
+import { RequestLinkButton } from '@/components/RequestLinkButton';
+
 
 const STATE_ICONS: Record<string, React.ElementType> = {
   CREATED:    Clock,
@@ -220,12 +222,17 @@ function MyOrderContent() {
 
           <div className="mb-8">
             <BackButton />
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
-              Buyer Portal
-            </p>
-            <h1 className="text-3xl font-serif font-bold text-foreground">
-              Track My Orders
-            </h1>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  Buyer Portal
+                </p>
+                <h1 className="text-3xl font-serif font-bold text-foreground">
+                  Track My Orders
+                </h1>
+              </div>
+              <RequestLinkButton />
+            </div>
           </div>
 
           {loading && (

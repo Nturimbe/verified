@@ -254,7 +254,7 @@ function MyTransactionsContent() {
                     </div>
                   </div>
 
-                  {(tx.state === 'FUNDED' || tx.state === 'DISPATCHED') && (
+                {(tx.state === 'FUNDED' || tx.state === 'DISPATCHED') && (
                     <div className="mt-3 pt-3 border-t border-border">
                       <Link
                         href={`/dispatch/${tx.id}`}
@@ -263,6 +263,17 @@ function MyTransactionsContent() {
                         {tx.state === 'FUNDED' ? 'Go to dispatch page' : 'View dispatch page'}
                         <ArrowRight className="w-3 h-3" />
                       </Link>
+                    </div>
+                  )}
+                  {tx.state === 'RESOLVED' && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <a
+                        href={api.getReceiptUrl(tx.id)}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-xs text-brand-main hover:underline flex items-center gap-1"
+                      >
+                        Download Receipt
+                      </a>
                     </div>
                   )}
                 </CardContent>
