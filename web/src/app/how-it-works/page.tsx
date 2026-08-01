@@ -144,10 +144,7 @@ export default function HowItWorksPage() {
     <PageTransition>
       <div className="min-h-screen bg-background">
 
-        {/* Header */}
-        https://verified-web.onrender.com/pay/4f70b7a0-39c2-49e5-8877-b58664c12fd8
-
-        {/* Role toggle */}
+          {/* Role toggle */}
         <div className="sticky top-16 z-10 bg-background border-b border-border">
           <div className="
           

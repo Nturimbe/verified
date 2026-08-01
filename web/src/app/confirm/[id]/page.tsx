@@ -235,7 +235,7 @@ export default function ConfirmPage() {
       Confirming...
     </span>
   ) : (
-    <span className="flex items-center gap-2">
+    <span className="flex items-center gap-2 whitespace-normal">
       <CheckCircle className="w-5 h-5" />
       Yes, I Received It — Release Payment
     </span>
