@@ -3,17 +3,8 @@ const express = require('express');
 const router  = express.Router();
 const prisma  = require('../db');
 
-// ── Auth middleware ──────────────────────────────────────────────────────────
-function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'] || req.query.token;
-  if (token !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ error: 'Unauthorised' });
-  }
-  next();
-}
-
 // ── Dashboard overview ───────────────────────────────────────────────────────
-router.get('/overview', requireAdmin, async (req, res) => {
+  router.get('/overview', async (req, res) => {
   try {
     const [
       totalTransactions,
@@ -61,7 +52,7 @@ router.get('/overview', requireAdmin, async (req, res) => {
 });
 
 // ── All transactions ─────────────────────────────────────────────────────────
-router.get('/transactions', requireAdmin, async (req, res) => {
+router.get('/transactions', async (req, res) => {
   try {
     const { state, page = 1, limit = 20 } = req.query;
     const where = state ? { state } : {};
@@ -86,7 +77,7 @@ router.get('/transactions', requireAdmin, async (req, res) => {
 });
 
 // ── Single transaction ───────────────────────────────────────────────────────
-router.get('/transactions/:id', requireAdmin, async (req, res) => {
+router.get('/transactions/:id', async (req, res) => {
   try {
     const transaction = await prisma.transaction.findUnique({
       where:   { id: req.params.id },
@@ -152,7 +143,7 @@ router.patch('/transactions/:id/state', async (req, res) => {
 });
 
 // ── All disputes ─────────────────────────────────────────────────────────────
-router.get('/disputes', requireAdmin, async (req, res) => {
+router.get('/disputes', async (req, res) => {
   try {
     const { status = 'OPEN' } = req.query;
     const disputes = await prisma.dispute.findMany({
@@ -170,7 +161,7 @@ router.get('/disputes', requireAdmin, async (req, res) => {
 });
 
 // ── Ledger reconciliation ────────────────────────────────────────────────────
-router.get('/reconcile', requireAdmin, async (req, res) => {
+router.get('/reconcile', async (req, res) => {
   try {
     const entries = await prisma.ledgerEntry.findMany();
 

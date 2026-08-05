@@ -2,7 +2,10 @@ const express  = require('express');
 const router   = express.Router();
 const prisma   = require('../db');
 const bcrypt   = require('bcryptjs');
+const jwt      = require('jsonwebtoken');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/adminAuth');
+
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
 
 // POST /admin/auth/login
 router.post('/login', async (req, res) => {
@@ -13,20 +16,8 @@ router.post('/login', async (req, res) => {
   }
 
   try {
-    // Check legacy single admin first
-    if (
-      email === 'admin' &&
-      password === process.env.ADMIN_SECRET
-    ) {
-      return res.json({
-        token:     process.env.ADMIN_SECRET,
-        name:      'Super Admin',
-        role:      'SUPER_ADMIN',
-        legacy:    true
-      });
-    }
-
     const admin = await prisma.admin.findUnique({ where: { email } });
+
     if (!admin || !admin.isActive) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -36,17 +27,40 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    const token = jwt.sign(
+      { id: admin.id, name: admin.name, role: admin.role },
+      ADMIN_JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    res.cookie('admin_session', token, {
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge:   12 * 60 * 60 * 1000
+    });
+
     res.json({
-      token: process.env.ADMIN_SECRET,
-      name:  admin.name,
-      role:  admin.role,
-      id:    admin.id
+      message: 'Logged in',
+      name:    admin.name,
+      role:    admin.role
     });
 
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Login failed' });
   }
+});
+
+// GET /admin/auth/me
+router.get('/me', requireAdmin, (req, res) => {
+  res.json({ name: req.admin.name, role: req.admin.role });
+});
+
+// POST /admin/auth/logout
+router.post('/logout', (req, res) => {
+  res.clearCookie('admin_session');
+  res.json({ message: 'Logged out' });
 });
 
 // POST /admin/auth/create — super admin only
@@ -91,13 +105,8 @@ router.get('/list', requireSuperAdmin, async (req, res) => {
   try {
     const admins = await prisma.admin.findMany({
       select: {
-        id:        true,
-        name:      true,
-        email:     true,
-        role:      true,
-        isActive:  true,
-        createdBy: true,
-        createdAt: true
+        id: true, name: true, email: true, role: true,
+        isActive: true, createdBy: true, createdAt: true
       },
       orderBy: { createdAt: 'desc' }
     });

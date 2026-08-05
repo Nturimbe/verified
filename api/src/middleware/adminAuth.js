@@ -1,20 +1,37 @@
+const jwt = require('jsonwebtoken');
+
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+
 function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'];
-  if (!token || token !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ error: 'Unauthorised' });
+  const token = req.cookies?.admin_session;
+  if (!token) {
+    return res.status(401).json({ error: 'Not logged in' });
   }
-  next();
+  try {
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET);
+    req.admin = payload;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired session' });
+  }
 }
 
 function requireSuperAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'];
-  if (!token || token !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ error: 'Unauthorised' });
+  const token = req.cookies?.admin_session;
+  if (!token) {
+    return res.status(401).json({ error: 'Not logged in' });
   }
-  // Super admin check — in future this will check role in DB
-  // For now the ADMIN_SECRET holder is always super admin
-  req.adminName = 'Super Admin';
-  next();
+  try {
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET);
+    if (payload.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Super admin access required' });
+    }
+    req.admin = payload;
+    req.adminName = payload.name;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired session' });
+  }
 }
 
 module.exports = { requireAdmin, requireSuperAdmin };

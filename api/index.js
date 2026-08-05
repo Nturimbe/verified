@@ -85,9 +85,10 @@ app.use('/transactions', transactions);
 app.use('/disputes', disputes);
 app.use('/notifications', require('./src/routes/notifications'));
 app.use('/receipts', require('./src/routes/receipts'));
-app.use('/admin/api', adminRoutes);
+const { requireAdmin } = require('./src/middleware/adminAuth');
+app.use('/admin/api', requireAdmin, adminRoutes);
 app.use('/admin/auth', adminAuthRoutes);
-app.post('/admin/auth/login', adminLoginLimit);
+app.use('/admin/auth/login', adminLoginLimit);
 app.use('/auth', authRoutes);
 
 // Root — serve landing page
