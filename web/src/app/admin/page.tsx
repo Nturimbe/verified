@@ -230,14 +230,19 @@ export default function AdminPage() {
           <p className="font-serif text-brand-amber font-bold">Verified</p>
           <span className="text-xs text-green-600">Admin — {adminName}</span>
         </div>
-        <button
-          onClick={() => { setToken(''); setPassword(''); }}
+               <button
+          onClick={async () => {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/auth/logout`, {
+              method: 'POST', credentials: 'include'
+            });
+            setToken(''); setPassword(''); setEmail('');
+          }}
           className="flex items-center gap-1.5 text-xs text-green-400
             hover:text-brand-amber transition-colors"
         >
           <LogOut className="w-3.5 h-3.5" />
           Sign out
-        </button>
+        </button> 
       </div>
 
       <div className="border-b border-border bg-background sticky top-0 z-10">
