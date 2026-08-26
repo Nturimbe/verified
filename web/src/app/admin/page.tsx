@@ -226,9 +226,9 @@ export default function AdminPage() {
 
       <div className="bg-brand-darkest border-b border-green-900 px-4 py-3
         flex items-center justify-between">
-        <div className="flex items-center gap-3">
+               <div className="flex items-center gap-3">
           <p className="font-serif text-brand-amber font-bold">Verified</p>
-          <span className="text-xs text-green-600">Admin</span>
+          <span className="text-xs text-green-600">Admin — {adminName}</span>
         </div>
         <button
           onClick={() => { setToken(''); setPassword(''); }}
