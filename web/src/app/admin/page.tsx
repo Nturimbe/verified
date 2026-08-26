@@ -77,7 +77,9 @@ const STATE_COLORS: Record<string, string> = {
 
 export default function AdminPage() {
   const [token,    setToken]    = useState('');
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
+  const [adminName, setAdminName] = useState('');
   const [showPw,   setShowPw]   = useState(false);
   const [logging,  setLogging]  = useState(false);
   const [tab,      setTab]      = useState<Tab>('overview');
