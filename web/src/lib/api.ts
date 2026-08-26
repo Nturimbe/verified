@@ -194,9 +194,8 @@ export const api = {
 
 
 // ── Admin API (token-gated) ──────────────────────────────────────────────────
-
 export const adminApi = {
-  getOverview: (token: string) =>
+  getOverview: () =>
     apiFetch<{
       totalTransactions: number;
       byState:           Record<string, number>;
@@ -205,51 +204,50 @@ export const adminApi = {
       estimatedFees:     number;
       recentTransactions: Transaction[];
     }>('/admin/api/overview', {
-      headers: { 'x-admin-token': token },
-    }),
+      credentials: 'include',
+    } as RequestInit),
 
-  getTransactions: (token: string, state?: string, page = 1) =>
+  getTransactions: (state?: string, page = 1) =>
     apiFetch<{ transactions: Transaction[]; total: number }>(
       `/admin/api/transactions?${state ? `state=${state}&` : ''}page=${page}`,
-      { headers: { 'x-admin-token': token } }
+      { credentials: 'include' } as RequestInit
     ),
 
-  getDisputes: (token: string, status = 'OPEN') =>
+  getDisputes: (status = 'OPEN') =>
     apiFetch<Dispute[]>(`/admin/api/disputes?status=${status}`, {
-      headers: { 'x-admin-token': token },
-    }),
+      credentials: 'include',
+    } as RequestInit),
 
   resolveDispute: (
-  token: string,
-  disputeId: string,
-  decision: string,
-  decisionReason: string,
-  decidedBy: string,
-  approvedBy?: string,
-  partialAmount?: number
-) =>
-  apiFetch<{ message: string }>(`/disputes/${disputeId}/resolve`, {
-    method:  'POST',
-    headers: { 'x-admin-token': token },
-    body:    JSON.stringify({ decision, decisionReason, decidedBy, approvedBy, partialAmount }),
-  }),
-  
-  changeTransactionState: (token: string, id: string, newState: string, reason: string) =>
-    apiFetch<{ message: string }>(`/admin/api/transactions/${id}/state`, {
-      method:  'PATCH',
-      headers: { 'x-admin-token': token },
-      body:    JSON.stringify({ newState, reason }),
-    }),
+    disputeId: string,
+    decision: string,
+    decisionReason: string,
+    decidedBy: string,
+    approvedBy?: string,
+    partialAmount?: number
+  ) =>
+    apiFetch<{ message: string }>(`/disputes/${disputeId}/resolve`, {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify({ decision, decisionReason, decidedBy, approvedBy, partialAmount }),
+    } as RequestInit),
 
-  reconcile: (token: string) =>
+  changeTransactionState: (id: string, newState: string, reason: string) =>
+    apiFetch<{ message: string }>(`/admin/api/transactions/${id}/state`, {
+      method: 'PATCH',
+      credentials: 'include',
+      body: JSON.stringify({ newState, reason }),
+    } as RequestInit),
+
+  reconcile: () =>
     apiFetch<{
       totalEntries:      number;
       totalTransactions: number;
       balanced:          number;
       unbalanced:        Array<{ transactionId: string; balance: number }>;
     }>('/admin/api/reconcile', {
-      headers: { 'x-admin-token': token },
-    }),
+      credentials: 'include',
+    } as RequestInit),
 };
 
 // ── Auth API (session-based) ──────────────────────────────────────────────
