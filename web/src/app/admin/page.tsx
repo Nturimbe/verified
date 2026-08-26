@@ -91,17 +91,26 @@ export default function AdminPage() {
   const [txFilter,     setTxFilter]     = useState('');
   const [dispFilter,   setDispFilter]   = useState('OPEN');
   
-
   async function handleLogin() {
-    if (!password) { toast.error('Enter the admin password.'); return; }
+    if (!email || !password) { toast.error('Enter email and password.'); return; }
     setLogging(true);
     try {
-      const data = await adminApi.getOverview(password);
-      setToken(password);
-      setOverview(data as unknown as OverviewData);
-      toast.success('Logged in.');
-    } catch {
-      toast.error('Incorrect password.');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+
+      setToken('session');
+      setAdminName(data.name);
+      const overviewData = await adminApi.getOverview();
+      setOverview(overviewData as unknown as OverviewData);
+      toast.success(`Welcome, ${data.name}.`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Incorrect credentials.');
     } finally {
       setLogging(false);
     }
