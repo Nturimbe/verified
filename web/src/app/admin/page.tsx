@@ -160,7 +160,7 @@ export default function AdminPage() {
     }
   }
 
-  if (!token) {
+    if (!token) {
     return (
       <div className="min-h-screen bg-brand-darkest flex items-center
         justify-center px-4">
@@ -172,10 +172,18 @@ export default function AdminPage() {
               </p>
               <p className="text-sm text-muted-foreground">Admin Access</p>
             </div>
+            <Input
+              type="email"
+              placeholder="Admin email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              className="h-12 text-base"
+            />
             <div className="relative">
               <Input
                 type={showPw ? 'text' : 'password'}
-                placeholder="Enter admin password"
+                placeholder="Password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
