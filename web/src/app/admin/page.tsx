@@ -120,13 +120,13 @@ export default function AdminPage() {
     setTab(t);
     try {
       if (t === 'transactions') {
-        const data = await adminApi.getTransactions(token, txFilter || undefined);
+        const data = await adminApi.getTransactions(txFilter || undefined);
         setTransactions(
           ((data as unknown as { transactions: TxRecord[] }).transactions) || []
         );
       }
       if (t === 'disputes') {
-        const data = await adminApi.getDisputes(token, dispFilter);
+        const data = await adminApi.getDisputes(dispFilter);
         setDisputes(data as unknown as DisputeRecord[]);
       }
       if (t === 'ledger') {
@@ -141,7 +141,7 @@ export default function AdminPage() {
   async function filterTx(state: string) {
     setTxFilter(state);
     try {
-      const data = await adminApi.getTransactions(token, state || undefined);
+      const data = await adminApi.getTransactions( state || undefined);
       setTransactions(
         ((data as unknown as { transactions: TxRecord[] }).transactions) || []
       );
@@ -153,7 +153,7 @@ export default function AdminPage() {
   async function filterDisputes(status: string) {
     setDispFilter(status);
     try {
-      const data = await adminApi.getDisputes(token, status);
+      const data = await adminApi.getDisputes(status);
       setDisputes(data as unknown as DisputeRecord[]);
     } catch {
       toast.error('Failed to filter.');
@@ -395,7 +395,7 @@ export default function AdminPage() {
             </div>
             <div className="space-y-3">
               {transactions.map(tx => (
-                <AdminTransactionCard key={tx.id} tx={tx} token={token} />
+                <AdminTransactionCard key={tx.id} tx={tx} />
               ))}
               {transactions.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
@@ -426,7 +426,7 @@ export default function AdminPage() {
             </div>
             <div className="space-y-4">
               {disputes.map(d => (
-                <AdminDisputeCard key={d.id} dispute={d} token={token} />
+                <AdminDisputeCard key={d.id} dispute={d} />
               ))}
               {disputes.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
@@ -496,7 +496,7 @@ export default function AdminPage() {
   );
 }
 
-function AdminTransactionCard({ tx, token }: { tx: TxRecord; token: string }) {
+function AdminTransactionCard({ tx }: { tx: TxRecord; token: string }) {
   const [newState, setNewState] = useState('');
   const [reason,   setReason]   = useState('');
   const [saving,   setSaving]   = useState(false);
@@ -508,7 +508,7 @@ function AdminTransactionCard({ tx, token }: { tx: TxRecord; token: string }) {
     }
     setSaving(true);
     try {
-      await adminApi.changeTransactionState(token, tx.id, newState, reason);
+      await adminApi.changeTransactionState( tx.id, newState, reason);
       toast.success(`State updated to ${newState}`);
       setNewState('');
       setReason('');
@@ -587,7 +587,7 @@ function AdminTransactionCard({ tx, token }: { tx: TxRecord; token: string }) {
   );
 }
 
-function AdminDisputeCard({ dispute, token }: { dispute: DisputeRecord; token: string }) {
+function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }) {
   const [decision,   setDecision]   = useState('');
   const [reason,     setReason]     = useState('');
   const [decidedBy,  setDecidedBy]  = useState('');
@@ -619,7 +619,7 @@ function AdminDisputeCard({ dispute, token }: { dispute: DisputeRecord; token: s
     setSaving(true);
     try {
       await adminApi.resolveDispute(
-        token, dispute.id, decision, reason, decidedBy,
+        dispute.id, decision, reason, decidedBy,
         approvedBy || undefined,
         decision === 'PARTIAL_SPLIT' ? parseFloat(partialAmount) : undefined
       );
