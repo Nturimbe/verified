@@ -395,7 +395,7 @@ export default function AdminPage() {
             </div>
             <div className="space-y-3">
               {transactions.map(tx => (
-                <AdminTransactionCard key={tx.id} tx={tx} />
+                <AdminTransactionCard key={tx.id} tx={tx} token={''} />
               ))}
               {transactions.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
@@ -426,7 +426,7 @@ export default function AdminPage() {
             </div>
             <div className="space-y-4">
               {disputes.map(d => (
-                <AdminDisputeCard key={d.id} dispute={d} />
+                <AdminDisputeCard key={d.id} dispute={d} token={''} />
               ))}
               {disputes.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">

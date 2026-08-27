@@ -239,7 +239,7 @@ export const adminApi = {
       body: JSON.stringify({ newState, reason }),
     } as RequestInit),
 
-  reconcile: () =>
+  reconcile: (token: string) =>
     apiFetch<{
       totalEntries:      number;
       totalTransactions: number;
