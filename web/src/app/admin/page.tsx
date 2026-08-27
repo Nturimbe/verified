@@ -119,7 +119,7 @@ export default function AdminPage() {
   async function switchTab(t: Tab) {
     setTab(t);
     try {
-      if (t === 'transactions') {
+            if (t === 'transactions') {
         const data = await adminApi.getTransactions(txFilter || undefined);
         setTransactions(
           ((data as unknown as { transactions: TxRecord[] }).transactions) || []
@@ -130,7 +130,7 @@ export default function AdminPage() {
         setDisputes(data as unknown as DisputeRecord[]);
       }
       if (t === 'ledger') {
-        const data = await adminApi.reconcile(token);
+        const data = await adminApi.reconcile();
         setReconcile(data as unknown as ReconcileData);
       }
     } catch {
