@@ -2,6 +2,7 @@ const express = require('express');
 const router  = express.Router();
 const prisma  = require('../db');
 const PDFDocument = require('pdfkit');
+const path = require('path');
 
 router.get('/:transactionId', async (req, res) => {
   try {
@@ -20,8 +21,26 @@ router.get('/:transactionId', async (req, res) => {
     const doc = new PDFDocument({ margin: 50 });
     doc.pipe(res);
 
+    // Watermark — large, centered, low opacity, drawn first so text sits on top of it
+    const logoPath = path.join(__dirname, '..', '..', 'assets', 'logo.png');
+    try {
+      doc.save();
+      doc.opacity(0.06);
+      const wmSize = 320;
+      doc.image(
+        logoPath,
+        (doc.page.width - wmSize) / 2,
+        (doc.page.height - wmSize) / 2,
+        { width: wmSize }
+      );
+      doc.restore();
+    } catch (e) {
+      console.error('Watermark skipped:', e.message);
+    }
+
+    doc.opacity(1);
     doc.fontSize(20).fillColor('#2E7D52').text('Verified', { align: 'left' });
-    doc.fontSize(10).fillColor('#888').text('Escrow Transaction Receipt', { align: 'left' });
+    doc.fontSize(10).fillColor('#888').text('Transaction Receipt', { align: 'left' });
     doc.moveDown(2);
 
     doc.fontSize(12).fillColor('#000');
@@ -43,7 +62,8 @@ router.get('/:transactionId', async (req, res) => {
 
     doc.moveDown(2);
     doc.fontSize(9).fillColor('#888').text(
-      'This receipt confirms a transaction processed through Verified escrow. ' +
+      'This receipt confirms a transaction coordinated through Verified using ' +
+      "Paystack Ghana's licensed payment infrastructure. " +
       'For queries, contact support@verified.gh',
       { align: 'left' }
     );
