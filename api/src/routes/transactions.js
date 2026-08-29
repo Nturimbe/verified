@@ -157,8 +157,8 @@ router.post('/webhook', async (req, res) => {
         where: { id: reference }
       });
 
-      if (funded?.sellerMomo) {
-        const dispatchUrl = `${process.env.BASE_URL}/dispatch.html?id=${funded.id}`;
+         if (funded?.sellerMomo) {
+        const dispatchUrl = `${process.env.FRONTEND_URL || 'http://localhost:4000'}/dispatch/${funded.id}`;
         await sendSMS(
           funded.sellerMomo,
           messages.FUNDED(funded.itemName, funded.amount, dispatchUrl)
@@ -248,6 +248,7 @@ router.patch('/:id/state', async (req, res) => {
     transition(transaction.state, newState);
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4000';
     if (newState === 'FUNDED') {
       await recordMovement({
         transactionId: transaction.id,
@@ -257,8 +258,8 @@ router.patch('/:id/state', async (req, res) => {
         note:          'Manual: buyer payment received'
       });
 
-      if (transaction.sellerMomo) {
-        const dispatchUrl = `${baseUrl}/dispatch.html?id=${transaction.id}`;
+           if (transaction.sellerMomo) {
+        const dispatchUrl = `${frontendUrl}/dispatch/${transaction.id}`;
         await sendSMS(
           transaction.sellerMomo,
           messages.FUNDED(transaction.itemName, transaction.amount, dispatchUrl)
@@ -273,9 +274,9 @@ router.patch('/:id/state', async (req, res) => {
       }
     }
 
-    if (newState === 'DISPATCHED') {
-      const confirmUrl  = `${baseUrl}/confirm.html?id=${transaction.id}`;
-      const buyerNumber = buyerPhone || transaction.buyerPhone;
+      if (newState === 'DISPATCHED') {
+        const confirmUrl  = `${frontendUrl}/confirm/${transaction.id}`;
+        const buyerNumber = buyerPhone || transaction.buyerPhone;
 
       if (buyerNumber) {
         await sendSMS(buyerNumber, messages.DISPATCHED(transaction.itemName, confirmUrl));
