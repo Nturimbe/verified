@@ -374,9 +374,10 @@ async function handleNativeShare() {
         Share
       </Button>
     </div>
-    <p className="copy-confirm text-center text-xs text-brand-main"
-      style={{display: copied ? 'block' : 'none'}}>
-      ✓ Copied to clipboard
+        <p className="copy-confirm text-center text-xs text-brand-main flex items-center justify-center gap-1"
+      style={{display: copied ? 'flex' : 'none'}}>
+      <CheckCircle className="w-3.5 h-3.5" />
+      Copied to clipboard
     </p>
   </div>
 )}
