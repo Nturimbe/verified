@@ -96,7 +96,7 @@ const faqs = [
   },
   {
     q: 'How much does Verified charge?',
-    a: 'A flat 2% platform fee on successfully completed transactions only. No fee on refunds or disputes.',
+    a: 'A flat 3% platform fee on successfully completed transactions only. No fee on refunds or disputes.',
   },
   {
     q: 'How long does it take to receive payment?',
