@@ -145,7 +145,7 @@ export default function HowItWorksPage() {
       <div className="min-h-screen bg-background">
 
           {/* Role toggle */}
-        <div className="sticky top-16 z-20 bg-background border-b border-border">
+        <div className="sticky top-16 z-10 bg-background border-b border-border">
           <div className="
           max-w-2xl mx-auto px-4 flex">
             {(['seller', 'buyer'] as const).map(r => (
@@ -193,7 +193,7 @@ export default function HowItWorksPage() {
                     {/* Left column — icon + connector */}
                     <div className="flex flex-col items-center flex-shrink-0">
                       <div className={`w-12 h-12 rounded-2xl flex items-center
-                        justify-center text-white shadow-md z-10 relative
+                        justify-center text-white shadow-md z-8 relative
                         transition-transform group-hover:scale-105
                         ${step.color}`}>
                         <step.icon className="w-5 h-5" />
