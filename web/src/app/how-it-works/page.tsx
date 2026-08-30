@@ -145,16 +145,8 @@ export default function HowItWorksPage() {
       <div className="min-h-screen bg-background">
 
           {/* Role toggle */}
-        <div className="sticky top-16 z-10 bg-background border-b border-border">
+        <div className="sticky top-16 z-20 bg-background border-b border-border">
           <div className="
-          
-          
-          
-          
-          
-          
-          
-          
           max-w-2xl mx-auto px-4 flex">
             {(['seller', 'buyer'] as const).map(r => (
               <button
