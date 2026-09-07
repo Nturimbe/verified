@@ -15,7 +15,7 @@ const { requireAdmin } = require('./src/middleware/adminAuth');
 const { requireCsrf } = require('./src/middleware/adminAuth');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-const { requireAdmin, requireCsrf } = require('./src/middleware/adminAuth');
+const { requireCsrf } = require('./src/middleware/adminAuth');
 const { alertCrash } = require('./src/services/alerts');
 
 process.on('uncaughtException', (err) => {
