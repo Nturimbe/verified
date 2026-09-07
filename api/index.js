@@ -15,7 +15,7 @@ const { requireAdmin } = require('./src/middleware/adminAuth');
 const { requireCsrf } = require('./src/middleware/adminAuth');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-const { alertCrash } = require('./src/services/alerts');
+
 
 process.on('uncaughtException', (err) => {
   console.error('UNCAUGHT EXCEPTION:', err);
@@ -26,12 +26,10 @@ process.on('unhandledRejection', (reason) => {
   console.error('UNHANDLED REJECTION:', reason);
   alertCrash('unhandledRejection', reason);
 });
-const cookieParser = require('cookie-parser');
 
 const app  = express();
 app.use(cookieParser());
 const PORT = process.env.PORT || 3001;
-const rateLimit = require('express-rate-limit');
 
 // Limit transaction creation — 10 per IP per 15 minutes
 const createTxLimit = rateLimit({
