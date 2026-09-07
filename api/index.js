@@ -89,6 +89,8 @@ const { requireAdmin } = require('./src/middleware/adminAuth');
 app.use('/admin/api', requireAdmin, adminRoutes);
 app.use('/admin/auth', adminAuthRoutes);
 app.use('/admin/auth/login', adminLoginLimit);
+app.use('/auth/request-otp', otpRequestLimit);
+app.use('/auth/verify-otp', otpVerifyLimit);
 app.use('/auth', authRoutes);
 
 // Root — serve landing page
