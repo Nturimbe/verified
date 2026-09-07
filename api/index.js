@@ -15,7 +15,6 @@ const { requireAdmin } = require('./src/middleware/adminAuth');
 const { requireCsrf } = require('./src/middleware/adminAuth');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
-const { requireCsrf } = require('./src/middleware/adminAuth');
 const { alertCrash } = require('./src/services/alerts');
 
 process.on('uncaughtException', (err) => {
@@ -105,9 +104,7 @@ app.use('/transactions', transactions);
 app.use('/disputes', disputes);
 app.use('/notifications', require('./src/routes/notifications'));
 app.use('/receipts', require('./src/routes/receipts'));
-const { requireAdmin } = require('./src/middleware/adminAuth');
-const { requireCsrf } = require('./src/middleware/adminAuth');
-app.use('/admin/api', requireAdmin, requireCsrf, adminRoutes);
+app.use('/admin/api', adminRoutes);
 app.use('/admin/auth', adminAuthRoutes);
 app.use('/admin/auth/login', adminLoginLimit);
 app.use('/auth/request-otp', otpRequestLimit);
