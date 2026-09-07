@@ -1,5 +1,11 @@
 {
   "name": "verified",
   "private": true,
-  "workspaces": ["api", "web"]
+  "workspaces": [
+    "api",
+    "web"
+  ],
+  "dependencies": {
+    "react-icons": "^5.7.0"
+  }
 }
