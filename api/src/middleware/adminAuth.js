@@ -34,4 +34,16 @@ function requireSuperAdmin(req, res, next) {
   }
 }
 
-module.exports = { requireAdmin, requireSuperAdmin };
+function requireCsrf(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
+    return next();
+  }
+  const headerToken = req.headers['x-csrf-token'];
+  const cookieToken = req.cookies?.admin_csrf;
+  if (!headerToken || !cookieToken || headerToken !== cookieToken) {
+    return res.status(403).json({ error: 'Invalid or missing CSRF token' });
+  }
+  next();
+}
+
+module.exports = { requireAdmin, requireSuperAdmin, requireCsrf };
