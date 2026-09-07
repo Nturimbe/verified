@@ -232,12 +232,18 @@ export const adminApi = {
       body: JSON.stringify({ decision, decisionReason, decidedBy, approvedBy, partialAmount }),
     } as RequestInit),
 
-  changeTransactionState: (id: string, newState: string, reason: string) =>
-    apiFetch<{ message: string }>(`/admin/api/transactions/${id}/state`, {
+    changeTransactionState: (id: string, newState: string, reason: string) => {
+    const csrfToken = document.cookie
+      .split('; ')
+      .find(row => row.startsWith('admin_csrf='))
+      ?.split('=')[1];
+    return apiFetch<{ message: string }>(`/admin/api/transactions/${id}/state`, {
       method: 'PATCH',
       credentials: 'include',
+      headers: csrfToken ? { 'x-csrf-token': csrfToken } : {},
       body: JSON.stringify({ newState, reason }),
-    } as RequestInit),
+    } as RequestInit);
+  },
 
   reconcile: () =>
     apiFetch<{
