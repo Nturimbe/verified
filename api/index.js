@@ -8,7 +8,6 @@ const adminRoutes  = require('./src/routes/admin');
 const adminAuthRoutes = require('./src/routes/adminAuth');
 const authRoutes = require('./src/routes/auth');
 const { alertCrash } = require('./src/services/alerts');
-const otpRequestLimit = require('./src/middleware/otpRequestLimit');
 const otpVerifyLimit = require('./src/middleware/otpVerifyLimit');
 const prisma = require('./src/db');
 const { requireAdmin } = require('./src/middleware/adminAuth');
