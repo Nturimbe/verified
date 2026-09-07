@@ -3,9 +3,12 @@ const router   = express.Router();
 const prisma   = require('../db');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
+const crypto   = require('crypto');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/adminAuth');
 
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+const ADMIN_JWT_SECRET  = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+const MAX_ATTEMPTS       = 5;
+const LOCKOUT_MINUTES     = 30;
 
 // POST /admin/auth/login
 router.post('/login', async (req, res) => {
@@ -22,16 +25,49 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    if (admin.lockedUntil && admin.lockedUntil > new Date()) {
+      const minutesLeft = Math.ceil((admin.lockedUntil - new Date()) / 60000);
+      return res.status(423).json({
+        error: `Account locked due to repeated failed attempts. Try again in ${minutesLeft} minute(s).`
+      });
+    }
+
     const valid = await bcrypt.compare(password, admin.passwordHash);
+
     if (!valid) {
+      const attempts = admin.failedAttempts + 1;
+      const shouldLock = attempts >= MAX_ATTEMPTS;
+
+      await prisma.admin.update({
+        where: { id: admin.id },
+        data: {
+          failedAttempts: shouldLock ? 0 : attempts,
+          lockedUntil: shouldLock
+            ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+            : null
+        }
+      });
+
+      if (shouldLock) {
+        return res.status(423).json({
+          error: `Too many failed attempts. Account locked for ${LOCKOUT_MINUTES} minutes.`
+        });
+      }
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    await prisma.admin.update({
+      where: { id: admin.id },
+      data:  { failedAttempts: 0, lockedUntil: null }
+    });
 
     const token = jwt.sign(
       { id: admin.id, name: admin.name, role: admin.role },
       ADMIN_JWT_SECRET,
       { expiresIn: '12h' }
     );
+
+    const csrfToken = crypto.randomBytes(24).toString('hex');
 
     res.cookie('admin_session', token, {
       httpOnly: true,
@@ -40,10 +76,18 @@ router.post('/login', async (req, res) => {
       maxAge:   12 * 60 * 60 * 1000
     });
 
+    res.cookie('admin_csrf', csrfToken, {
+      httpOnly: false,
+      secure:   process.env.NODE_ENV === 'production',
+      sameSite: 'none',
+      maxAge:   12 * 60 * 60 * 1000
+    });
+
     res.json({
       message: 'Logged in',
       name:    admin.name,
-      role:    admin.role
+      role:    admin.role,
+      csrfToken
     });
 
   } catch (error) {
