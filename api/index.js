@@ -7,6 +7,17 @@ const disputes     = require('./src/routes/disputes');
 const adminRoutes  = require('./src/routes/admin');
 const adminAuthRoutes = require('./src/routes/adminAuth');
 const authRoutes = require('./src/routes/auth');
+const { alertCrash } = require('./src/services/alerts');
+
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+  alertCrash('uncaughtException', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+  alertCrash('unhandledRejection', reason);
+});
 const cookieParser = require('cookie-parser');
 
 const app  = express();
@@ -120,6 +131,13 @@ if (process.env.SENTRY_DSN) {
 }
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Unhandled route error:', err);
+  alertCrash(`${req.method} ${req.originalUrl}`, err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Something went wrong. Our team has been notified.' });
 });
 
 app.listen(PORT, () => {
