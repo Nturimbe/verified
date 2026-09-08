@@ -9,8 +9,8 @@ const adminAuthRoutes = require('./src/routes/adminAuth');
 const authRoutes = require('./src/routes/auth');
 const { alertCrash } = require('./src/services/alerts');
 const prisma = require('./src/db');
-const { requireAdmin } = require('./src/middleware/adminAuth');
-const { requireCsrf } = require('./src/middleware/adminAuth');
+const { requireAdmin } = require('./src/middleware/auth');
+const { requireCsrf } = require('./src/middleware/auth');
 const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 
