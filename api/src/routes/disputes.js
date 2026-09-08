@@ -5,6 +5,7 @@ const { sendSMS, messages } = require('../services/sms');
 const { sendEmail, emailTemplates } = require('../services/email');
 const { sanitizeText } = require('../utils/sanitize');
 const { recordMovement } = require('../services/ledger');
+const { requireAdmin, requireCsrf } = require('../middleware/auth');
 const { createNotification } = require('../services/notify');
 
 // ── POST /disputes ───────────────────────────────────────────────────────────
@@ -199,7 +200,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── POST /disputes/:id/resolve ───────────────────────────────────────────────
-router.post('/:id/resolve', async (req, res) => {
+ router.post('/:id/resolve', requireAdmin, requireCsrf, async (req, res) => {
   const { decision, decisionReason, decidedBy, approvedBy, partialAmount } = req.body;
 
   if (!decision || !decisionReason || !decidedBy) {
