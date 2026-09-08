@@ -51,6 +51,13 @@ const adminLoginLimit = rateLimit({
   message:  { error: 'Too many login attempts.' }
 });
 
+// Rate limit OTP requests to prevent abuse
+const otpRequestLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:      5,
+  message:  { error: 'Too many OTP requests. Please wait.' }
+});
+
 // Security headers
  const allowedOrigins = [
   'http://localhost:4000',
