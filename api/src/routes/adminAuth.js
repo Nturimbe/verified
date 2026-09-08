@@ -5,7 +5,7 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const crypto   = require('crypto');
 const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
-
+const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const ADMIN_JWT_SECRET  = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
 const MAX_ATTEMPTS       = 5;
 const LOCKOUT_MINUTES     = 30;
