@@ -1,4 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getCsrfToken } from './csrf';
+
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -218,7 +220,7 @@ export const adminApi = {
       credentials: 'include',
     } as RequestInit),
 
-  resolveDispute: (
+   resolveDispute: (
     disputeId: string,
     decision: string,
     decisionReason: string,
@@ -229,21 +231,17 @@ export const adminApi = {
     apiFetch<{ message: string }>(`/disputes/${disputeId}/resolve`, {
       method: 'POST',
       credentials: 'include',
+      headers: { 'x-csrf-token': getCsrfToken() || '' },
       body: JSON.stringify({ decision, decisionReason, decidedBy, approvedBy, partialAmount }),
     } as RequestInit),
 
-    changeTransactionState: (id: string, newState: string, reason: string) => {
-    const csrfToken = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('admin_csrf='))
-      ?.split('=')[1];
-    return apiFetch<{ message: string }>(`/admin/api/transactions/${id}/state`, {
+      changeTransactionState: (id: string, newState: string, reason: string) =>
+    apiFetch<{ message: string }>(`/admin/api/transactions/${id}/state`, {
       method: 'PATCH',
       credentials: 'include',
-      headers: csrfToken ? { 'x-csrf-token': csrfToken } : {},
+      headers: { 'x-csrf-token': getCsrfToken() || '' },
       body: JSON.stringify({ newState, reason }),
-    } as RequestInit);
-  },
+    } as RequestInit),
 
   reconcile: () =>
     apiFetch<{
