@@ -8,7 +8,6 @@ const adminRoutes  = require('./src/routes/admin');
 const adminAuthRoutes = require('./src/routes/adminAuth');
 const authRoutes = require('./src/routes/auth');
 const { alertCrash } = require('./src/services/alerts');
-const otpVerifyLimit = require('./src/middleware/otpVerifyLimit');
 const prisma = require('./src/db');
 const { requireAdmin } = require('./src/middleware/adminAuth');
 const { requireCsrf } = require('./src/middleware/adminAuth');
@@ -56,6 +55,13 @@ const otpRequestLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max:      5,
   message:  { error: 'Too many OTP requests. Please wait.' }
+});
+
+// Rate limit OTP verification attempts to prevent brute force
+const otpVerifyLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max:      5,
+  message:  { error: 'Too many OTP verification attempts. Please wait.' }
 });
 
 // Security headers
