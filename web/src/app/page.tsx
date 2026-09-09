@@ -36,7 +36,7 @@ export default function HomePage() {
             <Shield className="w-3.5 h-3.5 text-brand-amber" />
             <span className="text-brand-amber text-xs font-semibold
               tracking-widest uppercase">
-              Ghana's Escrow Platform
+              Safe Trading, Powered by Paystack
             </span>
           </div>
 

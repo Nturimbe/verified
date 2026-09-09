@@ -71,6 +71,7 @@ model DisputeAuditLog {
 
 model Admin {
   id             String    @id @default(uuid())
+  adminNumber    Int       @unique @default(autoincrement())
   name           String
   email          String    @unique
   passwordHash   String
