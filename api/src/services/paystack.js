@@ -29,6 +29,22 @@ async function verifyPayment(reference) {
   return response.data.data;
 }
 
+// Refund a buyer's original charge (dispute resolved in buyer's favour)
+async function refundBuyer({ transactionId, amount, reason }) {
+  const response = await paystackApi.post('/refund', {
+    transaction: transactionId,
+    amount: Math.round(amount * 100),
+    merchant_note: reason || 'Verified dispute resolution: refund to buyer'
+  });
+  return response.data.data;
+}
+
+// Mock version for local/dev testing before Paystack refund access is confirmed
+function mockRefund({ transactionId, amount }) {
+  console.log(`[MOCK REFUND] ${transactionId} — GHS ${amount} would be refunded to buyer`);
+  return { status: 'mock_refunded', transaction: transactionId };
+}
+
 // Initiate a transfer to seller MoMo
 // NOTE: Requires Transfer API to be activated by Paystack
 async function transferToMomo({ amount, momoNumber, transactionId, reason }) {
@@ -71,5 +87,7 @@ module.exports = {
   initializePayment,
   verifyPayment,
   transferToMomo,
-  mockTransfer
+  mockTransfer,
+  refundBuyer,
+  mockRefund
 };
