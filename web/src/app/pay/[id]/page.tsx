@@ -182,7 +182,7 @@ if (notFound || !tx) {
                 <Shield className="w-4 h-4 text-brand-main flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-brand-dark leading-relaxed">
                   <strong>Your money is protected.</strong> Verified holds
-                  your payment securely. The seller only receives funds
+                  your payment securely Via Paystack payment rails. The seller only receives funds
                   after you confirm delivery. If something goes wrong,
                   we step in.
                 </p>

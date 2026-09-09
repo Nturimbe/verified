@@ -247,16 +247,34 @@ router.get('/:id', async (req, res) => {
       });
     }
 
+      const USE_MOCK_TRANSFER = process.env.USE_MOCK_TRANSFER !== 'false';
+    const { transferToMomo, mockTransfer, refundBuyer, mockRefund } = require('../services/paystack');
+    const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
+    const refundFn    = USE_MOCK_TRANSFER ? mockRefund   : refundBuyer;
+
     if (decision === 'PARTIAL_SPLIT') {
       const sellerAmount = parseFloat(partialAmount);
       const buyerRefund = transaction.amount - sellerAmount;
+
+      const transferResult = await transferFn({
+        amount: sellerAmount,
+        momoNumber: transaction.sellerMomo,
+        transactionId: transaction.id
+      });
 
       await recordMovement({
         transactionId: transaction.id,
         fromAccount: 'VERIFIED_ESCROW',
         toAccount: 'SELLER_MOMO',
         amount: sellerAmount,
+        reference: transferResult.transfer_code || transferResult.status,
         note: 'Partial dispute resolution: seller portion'
+      });
+
+      const refundResult = await refundFn({
+        transactionId: transaction.id,
+        amount: buyerRefund,
+        reason: 'Partial dispute resolution: buyer refund'
       });
 
       await recordMovement({
@@ -264,6 +282,7 @@ router.get('/:id', async (req, res) => {
         fromAccount: 'VERIFIED_ESCROW',
         toAccount: 'BUYER_REFUND',
         amount: buyerRefund,
+        reference: refundResult.status,
         note: 'Partial dispute resolution: buyer refund'
       });
 
@@ -275,6 +294,51 @@ router.get('/:id', async (req, res) => {
         await sendSMS(transaction.buyerPhone,
           `Verified: Dispute resolved with partial split. GHS ${buyerRefund} refunded to you.`);
       }
+    }
+
+    if (decision === 'RELEASE_TO_SELLER') {
+      const verifiedFee  = parseFloat((transaction.amount * 0.03).toFixed(2));
+      const sellerAmount = parseFloat((transaction.amount - verifiedFee).toFixed(2));
+
+      const transferResult = await transferFn({
+        amount: sellerAmount,
+        momoNumber: transaction.sellerMomo,
+        transactionId: transaction.id
+      });
+
+      await recordMovement({
+        transactionId: transaction.id,
+        fromAccount: 'VERIFIED_ESCROW',
+        toAccount: 'SELLER_MOMO',
+        amount: sellerAmount,
+        reference: transferResult.transfer_code || transferResult.status,
+        note: 'Dispute resolved: release to seller'
+      });
+
+      await recordMovement({
+        transactionId: transaction.id,
+        fromAccount: 'VERIFIED_ESCROW',
+        toAccount: 'VERIFIED_FEES',
+        amount: verifiedFee,
+        note: '3% Verified platform fee on dispute resolution'
+      });
+    }
+
+    if (decision === 'REFUND_TO_BUYER') {
+      const refundResult = await refundFn({
+        transactionId: transaction.id,
+        amount: transaction.amount,
+        reason: 'Dispute resolved: refund to buyer'
+      });
+
+      await recordMovement({
+        transactionId: transaction.id,
+        fromAccount: 'VERIFIED_ESCROW',
+        toAccount: 'BUYER_REFUND',
+        amount: transaction.amount,
+        reference: refundResult.status,
+        note: 'Dispute resolved: refund to buyer'
+      });
     }
 
     await prisma.dispute.update({
