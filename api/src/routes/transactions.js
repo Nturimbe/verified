@@ -8,7 +8,7 @@ const { initializePayment, verifyPayment, mockTransfer } = require('../services/
 const { sendSMS, messages } = require('../services/sms');
 const { createNotification } = require('../services/notify');
 const { sendEmail, emailTemplates }  = require('../services/email');
-
+const { requireAuth } = require('./auth');
 const USE_MOCK_TRANSFER = true;
 
 // ── POST /transactions ───────────────────────────────────────────────────────
@@ -203,9 +203,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── GET /transactions/buyer/:phone ───────────────────────────────────────────
-router.get('/buyer/:phone', async (req, res) => {
+router.get('/buyer/:phone', requireAuth, async (req, res) => {
   try {
-    const phone      = req.params.phone;
+    const phone      = req.user.phone;
     const normalised = phone.startsWith('+233')
       ? '0' + phone.slice(4)
       : phone;
@@ -229,11 +229,18 @@ router.get('/buyer/:phone', async (req, res) => {
 });
 
 // ── PATCH /transactions/:id/state ────────────────────────────────────────────
-router.patch('/:id/state', async (req, res) => {
+router.patch('/:id/state', requireAuth, async (req, res) => {
   const { newState, buyerName, buyerPhone } = req.body;
 
   if (!newState) {
     return res.status(400).json({ error: 'newState is required' });
+  }
+
+  const SELLER_ALLOWED_STATES = ['DISPATCHED'];
+  const BUYER_ALLOWED_STATES  = ['CONFIRMED', 'RESOLVED'];
+
+  if (![...SELLER_ALLOWED_STATES, ...BUYER_ALLOWED_STATES].includes(newState)) {
+    return res.status(403).json({ error: 'This transition is not permitted through this endpoint.' });
   }
 
   try {
@@ -243,6 +250,17 @@ router.patch('/:id/state', async (req, res) => {
 
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    const callerPhone = req.user.phone;
+    const isSeller = callerPhone === transaction.sellerMomo;
+    const isBuyer  = callerPhone === transaction.buyerPhone;
+
+    if (SELLER_ALLOWED_STATES.includes(newState) && !isSeller) {
+      return res.status(403).json({ error: 'Only the seller can perform this action.' });
+    }
+    if (BUYER_ALLOWED_STATES.includes(newState) && !isBuyer) {
+      return res.status(403).json({ error: 'Only the buyer can perform this action.' });
     }
 
     transition(transaction.state, newState);
@@ -527,10 +545,10 @@ router.post('/auto-release', async (req, res) => {
 });
 
 // ── GET /transactions/seller/:momo ───────────────────────────────────────────
-router.get('/seller/:momo', async (req, res) => {
+router.get('/seller/:momo', requireAuth, async (req, res) => {
   try {
     const transactions = await prisma.transaction.findMany({
-      where:   { sellerMomo: req.params.momo },
+      where:   { sellerMomo: req.user.phone },
       orderBy: { createdAt: 'desc' },
       take: 10,
       include: { ledgerEntries: true }
@@ -543,7 +561,7 @@ router.get('/seller/:momo', async (req, res) => {
 });
 
 // ── GET /transactions/seller-stats/:momo ─────────────────────────────────────
-router.get('/seller-stats/:momo', async (req, res) => {
+router.get('/seller-stats/:momo', async (req, res) => {  
   try {
     const momo = req.params.momo;
 
