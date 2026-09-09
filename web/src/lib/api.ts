@@ -140,20 +140,24 @@ export const api = {
   },
 
   // Move transaction to next state
-  updateState: (id: string, newState: TransactionState, extra?: Record<string, string>) =>
+   updateState: (id: string, newState: TransactionState, extra?: Record<string, string>) =>
     apiFetch<Transaction>(`/transactions/${id}/state`, {
       method: 'PATCH',
+      credentials: 'include',
       body:   JSON.stringify({ newState, ...extra }),
-    }),
+    } as RequestInit),
 
   // Get seller transaction history
   getSellerTransactions: (momo: string) =>
-    apiFetch<Transaction[]>(`/transactions/seller/${momo}`),
+    apiFetch<Transaction[]>(`/transactions/seller/${momo}`, {
+      credentials: 'include',
+    } as RequestInit),
 
   // Get buyer order history
   getBuyerOrders: (phone: string) =>
-    apiFetch<Transaction[]>(`/transactions/buyer/${encodeURIComponent(phone)}`),
-
+    apiFetch<Transaction[]>(`/transactions/buyer/${encodeURIComponent(phone)}`, {
+      credentials: 'include',
+    } as RequestInit),
   // Raise a dispute
   raiseDispute: (transactionId: string, reason: string, raisedBy: 'BUYER' | 'SELLER') =>
     apiFetch<{ message: string; disputeId: string }>('/disputes', {
