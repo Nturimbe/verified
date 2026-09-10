@@ -242,7 +242,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
     if (needsDualApproval) {
       // High-value dispute — record the decision but do NOT move money yet.
       // A second, different admin must call POST /:id/approve to release funds.
-      await prisma.dispute.update({
+           await prisma.dispute.update({
         where: { id: req.params.id },
         data: {
           status:           'PENDING_APPROVAL',
@@ -250,7 +250,8 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
           decisionReason,
           decidedBy,
           decidedByAdminId: req.admin.id,
-          decidedAt:        new Date()
+          decidedAt:        new Date(),
+          proposedAmount:   decision === 'PARTIAL_SPLIT' ? parseFloat(partialAmount) : null
         }
       });
 
@@ -462,9 +463,9 @@ router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
       });
     }
 
-    const transaction = dispute.transaction;
-    const decision    = dispute.decision;
-    const { partialAmount } = req.body;
+    const transaction   = dispute.transaction;
+    const decision       = dispute.decision;
+    const partialAmount = dispute.proposedAmount;
 
     const USE_MOCK_TRANSFER = process.env.USE_MOCK_TRANSFER !== 'false';
     const { transferToMomo, mockTransfer, refundBuyer, mockRefund } = require('../services/paystack');

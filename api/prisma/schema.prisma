@@ -51,6 +51,7 @@ model Dispute {
   decidedByAdminId  String?
   approvedBy        String?
   approvedByAdminId String?
+  proposedAmount    Float?
   decidedAt         DateTime?
   approvedAt        DateTime?
   responseDeadline  DateTime?
