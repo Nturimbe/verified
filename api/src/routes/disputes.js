@@ -200,8 +200,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── POST /disputes/:id/resolve ───────────────────────────────────────────────
- router.post('/:id/resolve', requireAdmin, requireCsrf, async (req, res) => {
-  const { decision, decisionReason, decidedBy, approvedBy, partialAmount } = req.body;
+router.post('/:id/resolve', requireAdmin, requireCsrf, async (req, res) => {
+  const { decision, decisionReason, decidedBy, partialAmount } = req.body;
 
   if (!decision || !decisionReason || !decidedBy) {
     return res.status(400).json({
@@ -216,7 +216,7 @@ router.get('/:id', async (req, res) => {
   }
 
   if (decision === 'PARTIAL_SPLIT' && (!partialAmount || partialAmount <= 0)) {
-    return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLIT' });
+return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLIT' });
   }
 
   try {
@@ -237,41 +237,47 @@ router.get('/:id', async (req, res) => {
 
         const { approverToken } = req.body;
 
-    if (transaction.amount >= 500 && !approverToken) {
-      return res.status(400).json({
-        error: 'Transactions above GHS 500 require a second admin to authenticate approval. Provide approverToken.'
-      });
-    }
+        const needsDualApproval = transaction.amount >= 500;
 
-    let approvedByVerified = null;
-    if (approverToken) {
-      try {
-        const jwt = require('jsonwebtoken');
-        const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
-        const approverPayload = jwt.verify(approverToken, ADMIN_JWT_SECRET);
-        approvedByVerified = approverPayload.name;
-
-        if (approverPayload.id === req.admin.id) {
-          return res.status(400).json({
-            error: 'The approving admin must be a different, separately authenticated admin.'
-          });
+    if (needsDualApproval) {
+      // High-value dispute — record the decision but do NOT move money yet.
+      // A second, different admin must call POST /:id/approve to release funds.
+      await prisma.dispute.update({
+        where: { id: req.params.id },
+        data: {
+          status:           'PENDING_APPROVAL',
+          decision,
+          decisionReason,
+          decidedBy,
+          decidedByAdminId: req.admin.id,
+          decidedAt:        new Date()
         }
-      } catch {
-        return res.status(400).json({ error: 'Invalid or expired approver session.' });
-      }
-    }
-    const approvedBy = approvedByVerified;
+      });
 
-    if (approvedBy && approvedBy === decidedBy) {
-      return res.status(400).json({
-        error: 'The approving admin must be different from the deciding admin.'
+      await prisma.disputeAuditLog.create({
+        data: {
+          disputeId:   dispute.id,
+          action:      `SUBMITTED_${decision}`,
+          performedBy: decidedBy,
+          note:        `${decisionReason} | Awaiting second-admin approval (amount ≥ GHS 500)${
+            decision === 'PARTIAL_SPLIT' ? ` | Proposed split: seller GHS ${partialAmount}` : ''
+          }`
+        }
+      });
+
+      return res.json({
+        message: 'Decision submitted. A second admin must approve before funds are released.',
+        disputeId: dispute.id,
+        status: 'PENDING_APPROVAL'
       });
     }
 
-      const USE_MOCK_TRANSFER = process.env.USE_MOCK_TRANSFER !== 'false';
+    // Below GHS 500 — no second approval required, proceed immediately.
+    const approvedBy = null;
+    const USE_MOCK_TRANSFER = process.env.USE_MOCK_TRANSFER !== 'false';
     const { transferToMomo, mockTransfer, refundBuyer, mockRefund } = require('../services/paystack');
     const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
-    const refundFn    = USE_MOCK_TRANSFER ? mockRefund   : refundBuyer;
+     const refundFn    = USE_MOCK_TRANSFER ? mockRefund   : refundBuyer;
 
     if (decision === 'PARTIAL_SPLIT') {
       const sellerAmount = parseFloat(partialAmount);
@@ -428,6 +434,151 @@ router.get('/:id', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to resolve dispute' });
+  }
+});
+
+// ── POST /disputes/:id/approve ───────────────────────────────────────────────
+// Second admin sign-off — only this route actually moves money for
+// high-value disputes. Requires a DIFFERENT authenticated admin from
+// the one who submitted the decision via /resolve.
+router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
+  try {
+    const dispute = await prisma.dispute.findUnique({
+      where: { id: req.params.id },
+      include: { transaction: true }
+    });
+
+    if (!dispute) {
+      return res.status(404).json({ error: 'Dispute not found' });
+    }
+
+    if (dispute.status !== 'PENDING_APPROVAL') {
+      return res.status(400).json({ error: 'This dispute is not awaiting approval.' });
+    }
+
+    if (dispute.decidedByAdminId === req.admin.id) {
+      return res.status(403).json({
+        error: 'You submitted this decision. A different admin must approve it.'
+      });
+    }
+
+    const transaction = dispute.transaction;
+    const decision    = dispute.decision;
+    const { partialAmount } = req.body;
+
+    const USE_MOCK_TRANSFER = process.env.USE_MOCK_TRANSFER !== 'false';
+    const { transferToMomo, mockTransfer, refundBuyer, mockRefund } = require('../services/paystack');
+    const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
+    const refundFn    = USE_MOCK_TRANSFER ? mockRefund   : refundBuyer;
+
+    if (decision === 'PARTIAL_SPLIT') {
+      const sellerAmount = parseFloat(partialAmount);
+      const buyerRefund  = transaction.amount - sellerAmount;
+
+      const transferResult = await transferFn({
+        amount: sellerAmount, momoNumber: transaction.sellerMomo, transactionId: transaction.id
+      });
+      await recordMovement({
+        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'SELLER_MOMO',
+        amount: sellerAmount, reference: transferResult.transfer_code || transferResult.status,
+        note: 'Partial dispute resolution: seller portion (approved)'
+      });
+
+      const refundResult = await refundFn({
+        transactionId: transaction.id, amount: buyerRefund, reason: 'Partial dispute resolution'
+      });
+      await recordMovement({
+        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'BUYER_REFUND',
+        amount: buyerRefund, reference: refundResult.status,
+        note: 'Partial dispute resolution: buyer refund (approved)'
+      });
+
+      if (transaction.sellerMomo) {
+        await sendSMS(transaction.sellerMomo,
+          `Verified: Dispute resolved with partial split. GHS ${sellerAmount} released to your MoMo.`);
+      }
+      if (transaction.buyerPhone) {
+        await sendSMS(transaction.buyerPhone,
+          `Verified: Dispute resolved with partial split. GHS ${buyerRefund} refunded to you.`);
+      }
+    }
+
+    if (decision === 'RELEASE_TO_SELLER') {
+      const verifiedFee  = parseFloat((transaction.amount * 0.03).toFixed(2));
+      const sellerAmount = parseFloat((transaction.amount - verifiedFee).toFixed(2));
+
+      const transferResult = await transferFn({
+        amount: sellerAmount, momoNumber: transaction.sellerMomo, transactionId: transaction.id
+      });
+      await recordMovement({
+        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'SELLER_MOMO',
+        amount: sellerAmount, reference: transferResult.transfer_code || transferResult.status,
+        note: 'Dispute resolved: release to seller (approved)'
+      });
+      await recordMovement({
+        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'VERIFIED_FEES',
+        amount: verifiedFee, note: '3% Verified platform fee on dispute resolution'
+      });
+
+      if (transaction.sellerMomo) {
+        await sendSMS(transaction.sellerMomo,
+          `Verified: Dispute resolved in your favour. GHS ${sellerAmount} released to your MoMo. Ref: ${dispute.id.split('-')[0]}`);
+      }
+      if (transaction.buyerPhone) {
+        await sendSMS(transaction.buyerPhone,
+          `Verified: Dispute for "${transaction.itemName}" resolved. Payment released to seller. Ref: ${dispute.id.split('-')[0]}`);
+      }
+    }
+
+    if (decision === 'REFUND_TO_BUYER') {
+      const refundResult = await refundFn({
+        transactionId: transaction.id, amount: transaction.amount, reason: 'Dispute resolved: refund'
+      });
+      await recordMovement({
+        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'BUYER_REFUND',
+        amount: transaction.amount, reference: refundResult.status,
+        note: 'Dispute resolved: refund to buyer (approved)'
+      });
+
+      if (transaction.buyerPhone) {
+        await sendSMS(transaction.buyerPhone,
+          `Verified: Dispute resolved in your favour. A refund of GHS ${transaction.amount} is being processed. Ref: ${dispute.id.split('-')[0]}`);
+      }
+      if (transaction.sellerMomo) {
+        await sendSMS(transaction.sellerMomo,
+          `Verified: Dispute for "${transaction.itemName}" resolved in buyer's favour. Ref: ${dispute.id.split('-')[0]}`);
+      }
+    }
+
+    await prisma.dispute.update({
+      where: { id: req.params.id },
+      data: {
+        status:            'RESOLVED',
+        approvedBy:        req.admin.name,
+        approvedByAdminId: req.admin.id,
+        approvedAt:        new Date()
+      }
+    });
+
+    await prisma.transaction.update({
+      where: { id: transaction.id },
+      data:  { state: 'RESOLVED' }
+    });
+
+    await prisma.disputeAuditLog.create({
+      data: {
+        disputeId:   dispute.id,
+        action:      `APPROVED_${decision}`,
+        performedBy: req.admin.name,
+        note:        `Approved and executed by ${req.admin.name}`
+      }
+    });
+
+    res.json({ message: `Dispute approved and resolved. Decision: ${decision}` });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to approve dispute' });
   }
 });
 
