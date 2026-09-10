@@ -224,19 +224,25 @@ export const adminApi = {
       credentials: 'include',
     } as RequestInit),
 
-   resolveDispute: (
+     resolveDispute: (
     disputeId: string,
     decision: string,
     decisionReason: string,
     decidedBy: string,
-    approvedBy?: string,
     partialAmount?: number
   ) =>
-    apiFetch<{ message: string }>(`/disputes/${disputeId}/resolve`, {
+    apiFetch<{ message: string; disputeId: string; status: string }>(`/disputes/${disputeId}/resolve`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'x-csrf-token': getCsrfToken() || '' },
-      body: JSON.stringify({ decision, decisionReason, decidedBy, approvedBy, partialAmount }),
+      body: JSON.stringify({ decision, decisionReason, decidedBy, partialAmount }),
+    } as RequestInit),
+
+  approveDispute: (disputeId: string) =>
+    apiFetch<{ message: string }>(`/disputes/${disputeId}/approve`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'x-csrf-token': getCsrfToken() || '' },
     } as RequestInit),
 
       changeTransactionState: (id: string, newState: string, reason: string) =>

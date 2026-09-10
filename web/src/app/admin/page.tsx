@@ -36,7 +36,10 @@ type DisputeRecord = {
   sellerResponse?: string;
   status: string;
   decision?: string;
+  decisionReason?: string;
   decidedBy?: string;
+  approvedBy?: string;
+  proposedAmount?: number;
   createdAt: string;
   transaction: TxRecord;
   auditLogs?: AuditLog[];
@@ -426,7 +429,7 @@ export default function AdminPage() {
             </div>
             <div className="space-y-4">
               {disputes.map(d => (
-                <AdminDisputeCard key={d.id} dispute={d} token={''} />
+               <AdminDisputeCard key={d.id} dispute={d} currentAdminName={adminName} />
               ))}
               {disputes.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
@@ -587,13 +590,13 @@ function AdminTransactionCard({ tx }: { tx: TxRecord; token: string }) {
   );
 }
 
-function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }) {
+function AdminDisputeCard({ dispute, currentAdminName }: { dispute: DisputeRecord; currentAdminName: string }) {
   const [decision,   setDecision]   = useState('');
   const [reason,     setReason]     = useState('');
   const [decidedBy,  setDecidedBy]  = useState('');
-  const [approvedBy, setApprovedBy] = useState('');
   const [saving,     setSaving]     = useState(false);
   const [resolved,   setResolved]   = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(false);
   const [partialAmount, setPartialAmount] = useState('');
 
   const tx        = dispute.transaction;
@@ -608,23 +611,19 @@ function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }
       toast.error('Enter a valid split amount.');
       return;
     }
-    if (needsDual && !approvedBy.trim()) {
-      toast.error('Dual approval required for GHS 500+.');
-      return;
-    }
-    if (needsDual && approvedBy === decidedBy) {
-      toast.error('Approving admin must be different from deciding admin.');
-      return;
-    }
     setSaving(true);
     try {
-      await adminApi.resolveDispute(
+      const result = await adminApi.resolveDispute(
         dispute.id, decision, reason, decidedBy,
-        approvedBy || undefined,
         decision === 'PARTIAL_SPLIT' ? parseFloat(partialAmount) : undefined
       );
-      setResolved(true);
-      toast.success('Dispute resolved.');
+      if (result.status === 'PENDING_APPROVAL') {
+        setPendingApproval(true);
+        toast.success('Decision submitted. Awaiting second admin approval.');
+      } else {
+        setResolved(true);
+        toast.success('Dispute resolved.');
+      }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Failed to resolve.');
     } finally {
@@ -632,11 +631,26 @@ function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }
     }
   }
 
-  const isResolved = resolved || dispute.status === 'RESOLVED';
+  async function handleApprove() {
+    setSaving(true);
+    try {
+      await adminApi.approveDispute(dispute.id);
+      setResolved(true);
+      toast.success('Approved and resolved.');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Failed to approve.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const isResolved  = resolved || dispute.status === 'RESOLVED';
+  const isPending   = !isResolved && (pendingApproval || dispute.status === 'PENDING_APPROVAL');
+  const isSameAdmin = isPending && dispute.decidedBy === currentAdminName;
 
   return (
     <Card className={`shadow-card border-l-4
-      ${isResolved ? 'border-l-brand-main opacity-70' : 'border-l-red-400'}`}>
+      ${isResolved ? 'border-l-brand-main opacity-70' : isPending ? 'border-l-amber-400' : 'border-l-red-400'}`}>
       <CardContent className="p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -645,7 +659,7 @@ function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }
               ID: {dispute.id.split('-')[0]} ·
               Raised: {new Date(dispute.createdAt).toLocaleString()} ·
               By: {dispute.raisedBy}
-              {needsDual && (
+              {needsDual && !isResolved && (
                 <span className="text-amber-600 ml-2">· Dual approval required</span>
               )}
             </p>
@@ -657,46 +671,42 @@ function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }
             <Badge className={`text-xs border mt-1
               ${isResolved
                 ? 'bg-green-50 text-brand-main border-green-200'
-                : 'bg-red-50 text-red-600 border-red-200'
+                : isPending
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-red-50 text-red-600 border-red-200'
               }`}>
-              {isResolved ? 'RESOLVED' : 'OPEN'}
+              {isResolved ? 'RESOLVED' : isPending ? 'PENDING APPROVAL' : 'OPEN'}
             </Badge>
           </div>
         </div>
 
-        <div className="bg-red-50 rounded-lg p-3">
-          <p className="text-xs font-medium text-muted-foreground mb-1">
-            {dispute.raisedBy === 'SELLER' ? 'Seller' : 'Buyer'} reason
-          </p>
-          <p className="text-sm text-foreground">{dispute.reason}</p>
-        </div>
-
-        {dispute.sellerResponse && dispute.raisedBy !== 'SELLER' && (
-          <div className="bg-green-50 rounded-lg p-3">
-            <p className="text-xs font-medium text-muted-foreground mb-1">
-              Seller response
+        {isPending && (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+            <p className="font-medium text-amber-800">
+              Decision: {dispute.decision}
+              {dispute.decision === 'PARTIAL_SPLIT' && ` — GHS ${dispute.proposedAmount ?? '—'} to seller`}
             </p>
-            <p className="text-sm text-foreground">{dispute.sellerResponse}</p>
+            <p className="text-amber-700 mt-1">Submitted by {dispute.decidedBy}: {dispute.decisionReason}</p>
           </div>
         )}
 
-        {(dispute.auditLogs?.length ?? 0) > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground
-              uppercase tracking-wide mb-2">Audit Trail</p>
-            <div className="space-y-1">
-              {dispute.auditLogs!.map(log => (
-                <p key={log.id} className="text-xs text-muted-foreground">
-                  [{new Date(log.createdAt).toLocaleString()}]{' '}
-                  <strong>{log.action}</strong> by {log.performedBy}
-                  {log.note ? ` — ${log.note}` : ''}
-                </p>
-              ))}
-            </div>
-          </div>
+        {isPending && !isSameAdmin && (
+          <Button
+            onClick={handleApprove}
+            disabled={saving}
+            className="w-full h-10 bg-brand-main hover:bg-brand-dark text-white border-0 text-sm font-semibold"
+          >
+            {saving ? 'Approving...' : 'Approve & Release Funds'}
+          </Button>
         )}
 
-        {!isResolved && (
+        {isPending && isSameAdmin && (
+          <p className="text-xs text-muted-foreground text-center">
+            You submitted this decision. A different admin must approve it.
+          </p>
+        )}
+
+        {!isResolved && !isPending && (
           <>
             <Separator />
             <div className="space-y-3">
@@ -738,21 +748,18 @@ function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }
                 onChange={e => setDecidedBy(e.target.value)}
                 className="h-9 text-sm"
               />
-              <Input
-                placeholder={needsDual
-                  ? 'Second admin name (required)'
-                  : 'Second admin name (optional)'}
-                value={approvedBy}
-                onChange={e => setApprovedBy(e.target.value)}
-                className="h-9 text-sm"
-              />
+              {needsDual && (
+                <p className="text-xs text-muted-foreground">
+                  This decision needs a second admin's approval before funds move.
+                </p>
+              )}
               <Button
                 onClick={handleResolve}
                 disabled={saving}
                 className="w-full h-10 bg-brand-darkest hover:bg-brand-dark
                   text-white border-0 text-sm font-semibold"
               >
-                {saving ? 'Submitting...' : 'Submit Decision'}
+                {saving ? 'Submitting...' : needsDual ? 'Submit for Approval' : 'Submit Decision'}
               </Button>
             </div>
           </>
@@ -761,7 +768,7 @@ function AdminDisputeCard({ dispute }: { dispute: DisputeRecord; token: string }
         {isResolved && (
           <div className="flex items-center gap-2 text-brand-main text-sm">
             <CheckCircle className="w-4 h-4" />
-            Resolved: {dispute.decision ?? ''} by {dispute.decidedBy ?? ''}
+            Resolved: {dispute.decision ?? ''} by {dispute.approvedBy || dispute.decidedBy || ''}
           </div>
         )}
       </CardContent>
