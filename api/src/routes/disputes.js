@@ -235,11 +235,32 @@ router.get('/:id', async (req, res) => {
 
     const transaction = dispute.transaction;
 
-    if (transaction.amount >= 500 && !approvedBy) {
+        const { approverToken } = req.body;
+
+    if (transaction.amount >= 500 && !approverToken) {
       return res.status(400).json({
-        error: `Transactions above GHS 500 require a second admin approval. Provide approvedBy.`
+        error: 'Transactions above GHS 500 require a second admin to authenticate approval. Provide approverToken.'
       });
     }
+
+    let approvedByVerified = null;
+    if (approverToken) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
+        const approverPayload = jwt.verify(approverToken, ADMIN_JWT_SECRET);
+        approvedByVerified = approverPayload.name;
+
+        if (approverPayload.id === req.admin.id) {
+          return res.status(400).json({
+            error: 'The approving admin must be a different, separately authenticated admin.'
+          });
+        }
+      } catch {
+        return res.status(400).json({ error: 'Invalid or expired approver session.' });
+      }
+    }
+    const approvedBy = approvedByVerified;
 
     if (approvedBy && approvedBy === decidedBy) {
       return res.status(400).json({
