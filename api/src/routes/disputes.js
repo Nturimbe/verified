@@ -7,6 +7,7 @@ const { sanitizeText } = require('../utils/sanitize');
 const { recordMovement } = require('../services/ledger');
 const { requireAdmin, requireCsrf } = require('../middleware/auth');
 const { createNotification } = require('../services/notify');
+const { splitWithFee, splitPartial } = require('../utils/money');
 
 // ── POST /disputes ───────────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
@@ -281,9 +282,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
      const refundFn    = USE_MOCK_TRANSFER ? mockRefund   : refundBuyer;
 
     if (decision === 'PARTIAL_SPLIT') {
-      const sellerAmount = parseFloat(partialAmount);
-      const buyerRefund = transaction.amount - sellerAmount;
-
+      const { sellerAmount, buyerRefund } = splitPartial(transaction.amount, parseFloat(partialAmount));
       const transferResult = await transferFn({
         amount: sellerAmount,
         momoNumber: transaction.sellerMomo,
@@ -325,9 +324,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
     }
 
     if (decision === 'RELEASE_TO_SELLER') {
-      const verifiedFee  = parseFloat((transaction.amount * 0.03).toFixed(2));
-      const sellerAmount = parseFloat((transaction.amount - verifiedFee).toFixed(2));
-
+      const { fee: verifiedFee, sellerAmount } = splitWithFee(transaction.amount);
       const transferResult = await transferFn({
         amount: sellerAmount,
         momoNumber: transaction.sellerMomo,

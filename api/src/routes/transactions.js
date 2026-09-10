@@ -10,6 +10,7 @@ const { createNotification } = require('../services/notify');
 const { sendEmail, emailTemplates }  = require('../services/email');
 const { requireAuth } = require('./auth');
 const USE_MOCK_TRANSFER = true;
+const { splitWithFee } = require('../utils/money');
 
 // ── POST /transactions ───────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
@@ -352,9 +353,7 @@ router.patch('/:id/state', requireAuth, async (req, res) => {
     }
 
     if (newState === 'RESOLVED' && transaction.state === 'CONFIRMED') {
-      const verifiedFee  = parseFloat((transaction.amount * 0.03).toFixed(2));
-      const sellerAmount = parseFloat((transaction.amount - verifiedFee).toFixed(2));
-
+            const { fee: verifiedFee, sellerAmount } = splitWithFee(transaction.amount);
       const { transferToMomo } = require('../services/paystack');
       const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
 
@@ -505,9 +504,7 @@ router.post('/auto-release', async (req, res) => {
       try {
         await prisma.transaction.update({ where: { id: tx.id }, data: { state: 'CONFIRMED' } });
 
-        const verifiedFee  = parseFloat((tx.amount * 0.03).toFixed(2));
-        const sellerAmount = parseFloat((tx.amount - verifiedFee).toFixed(2));
-
+        const { fee: verifiedFee, sellerAmount } = splitWithFee(tx.amount);
         const { transferToMomo } = require('../services/paystack');
         const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
 
