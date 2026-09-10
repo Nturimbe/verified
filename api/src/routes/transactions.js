@@ -114,14 +114,21 @@ router.get('/verify/:reference', async (req, res) => {
 router.post('/webhook', async (req, res) => {
   const secret    = process.env.PAYSTACK_SECRET_KEY;
   const signature = req.headers['x-paystack-signature'];
+  const crypto    = require('crypto');
 
   if (signature && req.rawBody) {
-    const hash = require('crypto')
+    const hash = crypto
       .createHmac('sha512', secret)
       .update(req.rawBody)
       .digest('hex');
 
-    if (hash !== signature) {
+    const hashBuf = Buffer.from(hash, 'hex');
+    const sigBuf  = Buffer.from(signature, 'hex');
+
+    const isValid = hashBuf.length === sigBuf.length &&
+      crypto.timingSafeEqual(hashBuf, sigBuf);
+
+    if (!isValid) {
       console.warn('[WEBHOOK] Invalid signature — rejected');
       return res.sendStatus(401);
     }
@@ -135,16 +142,23 @@ router.post('/webhook', async (req, res) => {
     const reference = event.data.reference;
 
     try {
-      const transaction = await prisma.transaction.findUnique({
+          const transaction = await prisma.transaction.findUnique({
         where: { id: reference }
       });
 
-      if (!transaction || transaction.state !== 'CREATED') {
-        console.log(`[WEBHOOK] Skipped ${reference} — state: ${transaction?.state}`);
+      if (!transaction) {
+        console.log(`[WEBHOOK] Transaction not found: ${reference}`);
         return;
       }
 
-      transition(transaction.state, 'FUNDED');
+      const { atomicTransition } = require('../services/stateMachine');
+      try {
+        await atomicTransition(prisma, transaction.id, 'CREATED', 'FUNDED');
+      } catch (raceError) {
+        // Already funded — most likely the buyer's redirect already processed it.
+        console.log(`[WEBHOOK] Skipped ${reference} — ${raceError.message}`);
+        return;
+      }
 
       await recordMovement({
         transactionId: transaction.id,
@@ -155,15 +169,9 @@ router.post('/webhook', async (req, res) => {
         note:          'Webhook: charge.success received from Paystack'
       });
 
-      await prisma.transaction.update({
-        where: { id: reference },
-        data:  { state: 'FUNDED' }
-      });
-
       const funded = await prisma.transaction.findUnique({
         where: { id: reference }
       });
-
          if (funded?.sellerMomo) {
         const dispatchUrl = `${process.env.FRONTEND_URL || 'http://localhost:4000'}/dispatch/${funded.id}`;
         await sendSMS(

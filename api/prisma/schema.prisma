@@ -37,25 +37,28 @@ model LedgerEntry {
 }
 
 model Dispute {
-  id               String      @id @default(uuid())
-  transactionId    String
-  reason           String
-  reasonCategory   String      @default("OTHER")
-  evidence         String?
-  sellerResponse   String?
-  raisedBy         String
-  status           String      @default("OPEN")
-  decision         String?
-  decisionReason   String?
-  decidedBy        String?
-  approvedBy       String?
-  decidedAt        DateTime?
-  responseDeadline DateTime?
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id                String      @id @default(uuid())
+  transactionId     String
+  reason            String
+  reasonCategory    String      @default("OTHER")
+  evidence          String?
+  sellerResponse    String?
+  raisedBy          String
+  status            String      @default("OPEN") // OPEN, PENDING_APPROVAL, RESOLVED
+  decision          String?
+  decisionReason    String?
+  decidedBy         String?
+  decidedByAdminId  String?
+  approvedBy        String?
+  approvedByAdminId String?
+  decidedAt         DateTime?
+  approvedAt        DateTime?
+  responseDeadline  DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
-  transaction      Transaction      @relation(fields: [transactionId], references: [id])
-  auditLogs        DisputeAuditLog[]
+  transaction       Transaction      @relation(fields: [transactionId], references: [id])
+  auditLogs         DisputeAuditLog[]
 }
 
 model DisputeAuditLog {
