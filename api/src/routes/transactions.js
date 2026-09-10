@@ -74,7 +74,15 @@ router.get('/verify/:reference', async (req, res) => {
       return res.redirect(`${frontendUrl}/confirm/${transaction.id}`);
     }
 
-    transition(transaction.state, 'FUNDED');
+        const { atomicTransition } = require('../services/stateMachine');
+    try {
+      await atomicTransition(prisma, transaction.id, 'CREATED', 'FUNDED');
+    } catch (raceError) {
+      // Already funded by a concurrent request (e.g. the webhook fired first) —
+      // not an error, just redirect to the current state.
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4000';
+      return res.redirect(`${frontendUrl}/confirm/${transaction.id}`);
+    }
 
     await recordMovement({
       transactionId: transaction.id,
@@ -88,7 +96,6 @@ router.get('/verify/:reference', async (req, res) => {
     const updated = await prisma.transaction.update({
       where: { id: reference },
       data:  {
-        state:      'FUNDED',
         buyerName:  payment.customer?.first_name || 'Buyer',
         buyerPhone: payment.metadata?.phone || null
       }
