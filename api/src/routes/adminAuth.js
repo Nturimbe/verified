@@ -8,6 +8,7 @@ const { requireAdmin, requireSuperAdmin } = require('../middleware/auth');
 const ADMIN_JWT_SECRET  = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
 const MAX_ATTEMPTS       = 5;
 const LOCKOUT_MINUTES     = 30;
+const { revoke } = require('../services/revocation');
 
 // POST /admin/auth/login
 router.post('/login', async (req, res) => {
@@ -60,14 +61,14 @@ router.post('/login', async (req, res) => {
       data:  { failedAttempts: 0, lockedUntil: null }
     });
 
+       const jti = crypto.randomUUID();
     const token = jwt.sign(
-      { id: admin.id, name: admin.name, role: admin.role },
+      { id: admin.id, name: admin.name, role: admin.role, jti },
       ADMIN_JWT_SECRET,
       { expiresIn: '12h' }
     );
 
     const csrfToken = crypto.randomBytes(24).toString('hex');
-
     res.cookie('admin_session', token, {
       httpOnly: true,
       secure:   process.env.NODE_ENV === 'production',
@@ -101,7 +102,16 @@ router.get('/me', requireAdmin, (req, res) => {
 });
 
 // POST /admin/auth/logout
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  const token = req.cookies?.admin_session;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, ADMIN_JWT_SECRET);
+      await revoke(payload.jti, new Date(payload.exp * 1000));
+    } catch {
+      // Token already invalid/expired — nothing to revoke
+    }
+  }
   res.clearCookie('admin_session');
   res.json({ message: 'Logged out' });
 });

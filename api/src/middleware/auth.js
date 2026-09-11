@@ -1,19 +1,22 @@
 const jwt = require('jsonwebtoken');
+const { isRevoked } = require('../services/revocation');
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
 
-function verifyAdminSession(req) {
+async function verifyAdminSession(req) {
   const token = req.cookies?.admin_session;
   if (!token) return null;
   try {
-    return jwt.verify(token, ADMIN_JWT_SECRET);
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET);
+    if (await isRevoked(payload.jti)) return null;
+    return payload;
   } catch {
     return null;
   }
 }
 
-function requireAdmin(req, res, next) {
-  const payload = verifyAdminSession(req);
+async function requireAdmin(req, res, next) {
+  const payload = await verifyAdminSession(req);
   if (!payload) {
     return res.status(401).json({ error: 'Not logged in' });
   }
@@ -21,8 +24,8 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-function requireSuperAdmin(req, res, next) {
-  const payload = verifyAdminSession(req);
+async function requireSuperAdmin(req, res, next) {
+  const payload = await verifyAdminSession(req);
   if (!payload) {
     return res.status(401).json({ error: 'Not logged in' });
   }

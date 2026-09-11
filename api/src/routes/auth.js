@@ -4,6 +4,7 @@ const prisma  = require('../db');
 const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const { sendSMS } = require('../services/sms');
+const { isRevoked, revoke } = require('../services/revocation');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const OTP_EXPIRY_MINUTES = 10;
@@ -78,8 +79,10 @@ router.post('/verify-otp', async (req, res) => {
       data:  { verified: true }
     });
 
+       const crypto = require('crypto');
+    const jti = crypto.randomUUID();
     const token = jwt.sign(
-      { phone: normalizedPhone },
+      { phone: normalizedPhone, jti },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
@@ -114,7 +117,16 @@ router.get('/me', (req, res) => {
 });
 
 // POST /auth/logout
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  const token = req.cookies?.verified_session;
+  if (token) {
+    try {
+      const payload = jwt.verify(token, JWT_SECRET);
+      await revoke(payload.jti, new Date(payload.exp * 1000));
+    } catch {
+      // Token already invalid/expired — nothing to revoke
+    }
+  }
   res.clearCookie('verified_session');
   res.json({ message: 'Logged out' });
 });
@@ -122,13 +134,17 @@ router.post('/logout', (req, res) => {
 module.exports = router;
 
 // Middleware other routes can use
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token = req.cookies?.verified_session;
   if (!token) {
     return res.status(401).json({ error: 'Please log in' });
   }
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, JWT_SECRET);
+    if (await isRevoked(payload.jti)) {
+      return res.status(401).json({ error: 'Session has been revoked. Please log in again.' });
+    }
+    req.user = payload;
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired session' });
