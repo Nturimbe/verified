@@ -482,7 +482,17 @@ router.post('/initiate-payment', async (req, res) => {
 // ── POST /transactions/auto-release ─────────────────────────────────────────
 router.post('/auto-release', async (req, res) => {
   const { secret } = req.body;
-  if (secret !== process.env.CRON_SECRET) {
+  const crypto = require('crypto');
+  const expected = process.env.CRON_SECRET || '';
+  const provided = secret || '';
+
+  const expectedBuf = Buffer.from(expected);
+  const providedBuf = Buffer.from(provided);
+
+  const isValid = expectedBuf.length === providedBuf.length &&
+    crypto.timingSafeEqual(expectedBuf, providedBuf);
+
+  if (!isValid) {
     return res.status(401).json({ error: 'Unauthorised' });
   }
 
