@@ -56,7 +56,7 @@ router.post('/verify-otp', async (req, res) => {
   const normalizedPhone = phone.replace(/\s/g, '').replace(/^\+233/, '0');
 
   try {
-    const otpRequest = await prisma.otpRequest.findFirst({
+       const otpRequest = await prisma.otpRequest.findFirst({
       where: {
         phone:     normalizedPhone,
         verified:  false,
@@ -69,8 +69,17 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ error: 'OTP expired or not found. Please request a new one.' });
     }
 
+    const MAX_ATTEMPTS = 5;
+    if (otpRequest.attempts >= MAX_ATTEMPTS) {
+      return res.status(429).json({ error: 'Too many incorrect attempts for this code. Please request a new one.' });
+    }
+
     const validCode = await bcrypt.compare(code, otpRequest.codeHash);
     if (!validCode) {
+      await prisma.otpRequest.update({
+        where: { id: otpRequest.id },
+        data:  { attempts: { increment: 1 } }
+      });
       return res.status(400).json({ error: 'Incorrect code.' });
     }
 
