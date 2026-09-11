@@ -35,4 +35,4 @@ function splitPartial(amountGhs, sellerPortionGhs) {
   };
 }
 
-module.exports = { toPesewas, toGhs, splitWithFee, splitPartial, FEE_RATE };// Centralized money math. All amounts stay GHS floats at rest (unchanged
+module.exports = { toPesewas, toGhs, splitWithFee, splitPartial, FEE_RATE };
