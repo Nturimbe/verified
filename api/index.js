@@ -68,11 +68,14 @@ app.use('/transactions/initiate-payment', paymentLimit);
 app.post('/transactions', createTxLimit);
 app.use('/transactions', transactions);
 
+app.use('/disputes/:id/resolve', adminMutationLimit);
+app.use('/disputes/:id/approve', adminMutationLimit);
 app.use('/disputes', disputes);
 
 app.use('/admin/api', requireAdmin, requireCsrf, adminMutationLimit, adminRoutes);
 
 app.use('/admin/auth/login', adminLoginLimit);
+app.use('/admin/auth/create', adminLoginLimit);
 app.use('/admin/auth', adminAuthRoutes);
 
 app.use('/auth/request-otp', otpRequestLimit);
