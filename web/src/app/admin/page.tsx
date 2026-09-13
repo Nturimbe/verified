@@ -356,7 +356,7 @@ export default function AdminPage() {
                   {(overview.recentTransactions || []).map(tx => (
                     <div key={tx.id}
                       className="flex items-center justify-between
-                        py-2 border-b border-border last:border-0">
+                        py-3 border-b border-border last:border-0">
                       <div>
                         <p className="font-medium text-sm text-foreground">
                           {tx.itemName}
