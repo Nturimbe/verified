@@ -75,6 +75,8 @@ app.use('/transactions', transactions);
 app.use('/disputes/:id/resolve', adminMutationLimit);
 app.use('/disputes/:id/approve', adminMutationLimit);
 app.use('/disputes', disputes);
+app.use('/notifications', require('./src/routes/notifications'));
+app.use('/receipts', require('./src/routes/receipts'));
 
 app.use('/admin/api', requireAdmin, requireCsrf, adminMutationLimit, adminRoutes);
 
