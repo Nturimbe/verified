@@ -409,7 +409,7 @@ router.patch('/:id/state', requireAuth, async (req, res) => {
       where: { id: req.params.id },
       data: {
         state: newState,
-        ...(buyerName  && { buyerName: sanitizeText(buyerName) }),
+          ...(buyerName  && { buyerName: sanitizeText(buyerName) }),
         ...(buyerPhone && { buyerPhone: sanitizeText(buyerPhone) })
       },
       include: { ledgerEntries: true }
