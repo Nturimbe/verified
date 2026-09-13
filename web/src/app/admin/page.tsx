@@ -14,6 +14,8 @@ import {
   TrendingUp, DollarSign, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { setCsrfToken, clearCsrfToken } from '@/lib/csrf';
+
 
 type Tab = 'overview' | 'transactions' | 'disputes' | 'ledger';
 
@@ -109,6 +111,7 @@ export default function AdminPage() {
 
       setToken('session');
       setAdminName(data.name);
+      setCsrfToken(data.csrfToken);
       const overviewData = await adminApi.getOverview();
       setOverview(overviewData as unknown as OverviewData);
       toast.success(`Welcome, ${data.name}.`);
@@ -234,10 +237,11 @@ export default function AdminPage() {
           <span className="text-xs text-green-600">Admin — {adminName}</span>
         </div>
                <button
-          onClick={async () => {
+            onClick={async () => {
             await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/auth/logout`, {
               method: 'POST', credentials: 'include'
             });
+            clearCsrfToken();
             setToken(''); setPassword(''); setEmail('');
           }}
           className="flex items-center gap-1.5 text-xs text-green-400
