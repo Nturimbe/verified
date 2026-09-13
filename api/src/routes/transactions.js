@@ -88,7 +88,7 @@ router.get('/verify/:reference', async (req, res) => {
     await recordMovement({
       transactionId: transaction.id,
       fromAccount:   'BUYER_WALLET',
-      toAccount:     'VERIFIED_ESCROW',
+      toAccount:     'PENDING_RELEASE',
       amount:        transaction.amount,
       reference:     payment.reference,
       note:          `Paystack payment confirmed. Channel: ${payment.channel}`
@@ -164,7 +164,7 @@ router.post('/webhook', async (req, res) => {
       await recordMovement({
         transactionId: transaction.id,
         fromAccount:   'BUYER_WALLET',
-        toAccount:     'VERIFIED_ESCROW',
+        toAccount:     'PENDING_RELEASE',
         amount:        transaction.amount,
         reference,
         note:          'Webhook: charge.success received from Paystack'
@@ -287,7 +287,7 @@ router.patch('/:id/state', requireAuth, async (req, res) => {
       await recordMovement({
         transactionId: transaction.id,
         fromAccount:   'BUYER_WALLET',
-        toAccount:     'VERIFIED_ESCROW',
+        toAccount:     'PENDING_RELEASE',
         amount:        transaction.amount,
         note:          'Manual: buyer payment received'
       });
@@ -365,7 +365,7 @@ router.patch('/:id/state', requireAuth, async (req, res) => {
 
       await recordMovement({
         transactionId: transaction.id,
-        fromAccount:   'VERIFIED_ESCROW',
+        fromAccount:   'PENDING_RELEASE',
         toAccount:     'SELLER_MOMO',
         amount:        sellerAmount,
         reference:     transferResult.transfer_code || transferResult.status,
@@ -376,7 +376,7 @@ router.patch('/:id/state', requireAuth, async (req, res) => {
 
       await recordMovement({
         transactionId: transaction.id,
-        fromAccount:   'VERIFIED_ESCROW',
+        fromAccount:   'PENDING_RELEASE',
         toAccount:     'VERIFIED_FEES',
         amount:        verifiedFee,
         note:          '3% Verified platform fee (incl. Paystack)'
@@ -523,13 +523,13 @@ router.post('/auto-release', async (req, res) => {
         });
 
         await recordMovement({
-          transactionId: tx.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'SELLER_MOMO',
+          transactionId: tx.id, fromAccount: 'PENDING_RELEASE', toAccount: 'SELLER_MOMO',
           amount: sellerAmount, reference: transferResult.transfer_code || transferResult.status,
           note: 'Auto-release: delivery window expired'
         });
 
         await recordMovement({
-          transactionId: tx.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'VERIFIED_FEES',
+          transactionId: tx.id, fromAccount: 'PENDING_RELEASE', toAccount: 'VERIFIED_FEES',
           amount: verifiedFee, note: '3% Verified platform fee (incl. Paystack)'
         });
 

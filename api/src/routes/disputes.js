@@ -291,7 +291,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
 
       await recordMovement({
         transactionId: transaction.id,
-        fromAccount: 'VERIFIED_ESCROW',
+        fromAccount: 'PENDING_RELEASE',
         toAccount: 'SELLER_MOMO',
         amount: sellerAmount,
         reference: transferResult.transfer_code || transferResult.status,
@@ -306,7 +306,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
 
       await recordMovement({
         transactionId: transaction.id,
-        fromAccount: 'VERIFIED_ESCROW',
+        fromAccount: 'PENDING_RELEASE',
         toAccount: 'BUYER_REFUND',
         amount: buyerRefund,
         reference: refundResult.status,
@@ -333,7 +333,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
 
       await recordMovement({
         transactionId: transaction.id,
-        fromAccount: 'VERIFIED_ESCROW',
+        fromAccount: 'PENDING_RELEASE',
         toAccount: 'SELLER_MOMO',
         amount: sellerAmount,
         reference: transferResult.transfer_code || transferResult.status,
@@ -342,7 +342,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
 
       await recordMovement({
         transactionId: transaction.id,
-        fromAccount: 'VERIFIED_ESCROW',
+        fromAccount: 'PENDING_RELEASE',
         toAccount: 'VERIFIED_FEES',
         amount: verifiedFee,
         note: '3% Verified platform fee on dispute resolution'
@@ -358,7 +358,7 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
 
       await recordMovement({
         transactionId: transaction.id,
-        fromAccount: 'VERIFIED_ESCROW',
+        fromAccount: 'PENDING_RELEASE',
         toAccount: 'BUYER_REFUND',
         amount: transaction.amount,
         reference: refundResult.status,
@@ -477,7 +477,7 @@ router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
         amount: sellerAmount, momoNumber: transaction.sellerMomo, transactionId: transaction.id
       });
       await recordMovement({
-        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'SELLER_MOMO',
+        transactionId: transaction.id, fromAccount: 'PENDING_RELEASE', toAccount: 'SELLER_MOMO',
         amount: sellerAmount, reference: transferResult.transfer_code || transferResult.status,
         note: 'Partial dispute resolution: seller portion (approved)'
       });
@@ -486,7 +486,7 @@ router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
         transactionId: transaction.id, amount: buyerRefund, reason: 'Partial dispute resolution'
       });
       await recordMovement({
-        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'BUYER_REFUND',
+        transactionId: transaction.id, fromAccount: 'PENDING_RELEASE', toAccount: 'BUYER_REFUND',
         amount: buyerRefund, reference: refundResult.status,
         note: 'Partial dispute resolution: buyer refund (approved)'
       });
@@ -509,12 +509,12 @@ router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
         amount: sellerAmount, momoNumber: transaction.sellerMomo, transactionId: transaction.id
       });
       await recordMovement({
-        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'SELLER_MOMO',
+        transactionId: transaction.id, fromAccount: 'PENDING_RELEASE', toAccount: 'SELLER_MOMO',
         amount: sellerAmount, reference: transferResult.transfer_code || transferResult.status,
         note: 'Dispute resolved: release to seller (approved)'
       });
       await recordMovement({
-        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'VERIFIED_FEES',
+        transactionId: transaction.id, fromAccount: 'PENDING_RELEASE', toAccount: 'VERIFIED_FEES',
         amount: verifiedFee, note: '3% Verified platform fee on dispute resolution'
       });
 
@@ -533,7 +533,7 @@ router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
         transactionId: transaction.id, amount: transaction.amount, reason: 'Dispute resolved: refund'
       });
       await recordMovement({
-        transactionId: transaction.id, fromAccount: 'VERIFIED_ESCROW', toAccount: 'BUYER_REFUND',
+        transactionId: transaction.id, fromAccount: 'PENDING_RELEASE', toAccount: 'BUYER_REFUND',
         amount: transaction.amount, reference: refundResult.status,
         note: 'Dispute resolved: refund to buyer (approved)'
       });
