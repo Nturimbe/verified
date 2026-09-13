@@ -323,7 +323,7 @@ export default function AdminPage() {
 
             <Card className="shadow-card border-border">
               <CardHeader>
-                <CardTitle className="text-sm font-semibold">
+                <CardTitle className="text-sm font-semibold px-3">
                   Transaction States
                 </CardTitle>
               </CardHeader>
@@ -347,7 +347,7 @@ export default function AdminPage() {
 
             <Card className="shadow-card border-border">
               <CardHeader>
-                <CardTitle className="text-sm font-semibold">
+                <CardTitle className="text-sm font-semibold px-3">
                   Recent Transactions
                 </CardTitle>
               </CardHeader>
@@ -356,7 +356,7 @@ export default function AdminPage() {
                   {(overview.recentTransactions || []).map(tx => (
                     <div key={tx.id}
                       className="flex items-center justify-between
-                        py-2 border-b border-border last:border-0">
+                        py-2 px-3 border-b border-border last:border-0">
                       <div>
                         <p className="font-medium text-sm text-foreground">
                           {tx.itemName}
@@ -449,11 +449,11 @@ export default function AdminPage() {
         {tab === 'ledger' && reconcile && (
           <Card className="shadow-card border-border">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold">
+              <CardTitle className="text-sm font-semibold px-3">
                 Ledger Reconciliation
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 px-3">
               {[
                 { label: 'Total entries',        value: reconcile.totalEntries,        ok: false, bad: false },
                 { label: 'Transactions tracked', value: reconcile.totalTransactions,   ok: false, bad: false },
