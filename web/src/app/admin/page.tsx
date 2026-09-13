@@ -331,7 +331,7 @@ export default function AdminPage() {
                 <div className="space-y-2">
                   {Object.entries(overview.byState || {}).map(([state, count]) => (
                     <div key={state}
-                      className="flex items-center justify-between py-2
+                      className="flex items-center justify-between py-2 px-3
                         border-b border-border last:border-0">
                       <Badge className={`text-xs border ${STATE_COLORS[state] ?? ''}`}>
                         {state}
@@ -356,7 +356,7 @@ export default function AdminPage() {
                   {(overview.recentTransactions || []).map(tx => (
                     <div key={tx.id}
                       className="flex items-center justify-between
-                        py-3 border-b border-border last:border-0">
+                        py-2 border-b border-border last:border-0">
                       <div>
                         <p className="font-medium text-sm text-foreground">
                           {tx.itemName}
