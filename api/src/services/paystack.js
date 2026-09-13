@@ -48,12 +48,15 @@ function mockRefund({ transactionId, amount }) {
 // Initiate a transfer to seller MoMo
 // NOTE: Requires Transfer API to be activated by Paystack
 async function transferToMomo({ amount, momoNumber, transactionId, reason }) {
-  // Step 1: Create a transfer recipient
+   // Step 1: Create a transfer recipient
+  const { getPaystackBankCode } = require('../utils/momoNetwork');
+  const bankCode = getPaystackBankCode(momoNumber);
+
   const recipientRes = await paystackApi.post('/transferrecipient', {
     type: 'mobile_money',
     name: `Seller ${momoNumber}`,
     account_number: momoNumber,
-    bank_code: 'MTN',  // MTN MoMo — update based on seller's network
+    bank_code: bankCode,
     currency: 'GHS'
   });
 
