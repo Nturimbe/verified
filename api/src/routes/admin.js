@@ -100,7 +100,13 @@ router.patch('/transactions/:id/state', async (req, res) => {
     });
   }
 
+  const VALID_STATES = ['CREATED', 'FUNDED', 'DISPATCHED', 'CONFIRMED', 'DISPUTED', 'RESOLVED'];
+  if (!VALID_STATES.includes(newState)) {
+    return res.status(400).json({ error: `newState must be one of: ${VALID_STATES.join(', ')}` });
+  }
+
   try {
+    const { atomicTransition } = require('../services/stateMachine');
     const transaction = await prisma.transaction.findUnique({
       where: { id: req.params.id }
     });
@@ -109,10 +115,44 @@ router.patch('/transactions/:id/state', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    const updated = await prisma.transaction.update({
-      where: { id: req.params.id },
-      data:  { state: newState }
-    });
+    if (transaction.state === 'DISPUTED') {
+      return res.status(400).json({
+        error: 'This transaction has an open dispute. Use the Disputes tab to resolve it — not this override.'
+      });
+    }
+
+    try {
+      await atomicTransition(prisma, transaction.id, transaction.state, newState);
+    } catch (transitionError) {
+      return res.status(400).json({ error: transitionError.message });
+    }
+
+    // If admin is force-resolving from CONFIRMED, actually move the money —
+    // do not just flip the label.
+    if (newState === 'RESOLVED' && transaction.state === 'CONFIRMED') {
+      const { splitWithFee } = require('../utils/money');
+      const { transferToMomo, mockTransfer } = require('../services/paystack');
+      const { recordMovement } = require('../services/ledger');
+
+      const USE_MOCK_TRANSFER = process.env.USE_MOCK_TRANSFER !== 'false';
+      const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
+      const { fee: verifiedFee, sellerAmount } = splitWithFee(transaction.amount);
+
+      const transferResult = await transferFn({
+        amount: sellerAmount, momoNumber: transaction.sellerMomo, transactionId: transaction.id
+      });
+
+      await recordMovement({
+        transactionId: transaction.id, fromAccount: 'PENDING_RELEASE', toAccount: 'SELLER_MOMO',
+        amount: sellerAmount, reference: transferResult.transfer_code || transferResult.status,
+        note: `Admin override resolution by ${req.admin.name}: ${reason}`
+      });
+
+      await recordMovement({
+        transactionId: transaction.id, fromAccount: 'PENDING_RELEASE', toAccount: 'VERIFIED_FEES',
+        amount: verifiedFee, note: '3% Verified platform fee (admin override)'
+      });
+    }
 
     // Log the admin action in dispute audit if a dispute exists
     const dispute = await prisma.dispute.findFirst({
@@ -124,7 +164,7 @@ router.patch('/transactions/:id/state', async (req, res) => {
         data: {
           disputeId:   dispute.id,
           action:      `ADMIN_STATE_CHANGE_TO_${newState}`,
-          performedBy: 'ADMIN',
+          performedBy: req.admin.name,
           note:        reason
         }
       });
@@ -132,8 +172,7 @@ router.patch('/transactions/:id/state', async (req, res) => {
 
     res.json({
       message: `Transaction state updated to ${newState}`,
-      id:      updated.id,
-      state:   updated.state
+      state:   newState
     });
 
   } catch (error) {

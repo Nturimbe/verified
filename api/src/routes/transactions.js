@@ -210,7 +210,41 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Transaction not found' });
     }
 
-    res.json(transaction);
+    // Determine if the caller is an authenticated party to this transaction.
+    // No session at all is expected here — this route is hit pre-login from
+    // the public pay page — so absence of a session is not an error, it just
+    // means the response gets the reduced, public-safe shape.
+    let callerPhone = null;
+    const token = req.cookies?.verified_session;
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const payload = jwt.verify(token, process.env.JWT_SECRET);
+        callerPhone = payload.phone;
+      } catch {
+        // invalid/expired token — treat as no session, not an error
+      }
+    }
+
+    const isParty = callerPhone &&
+      (callerPhone === transaction.sellerMomo || callerPhone === transaction.buyerPhone);
+
+    if (isParty) {
+      return res.json(transaction);
+    }
+
+    // Public/pre-login shape — enough to display and pay, nothing sensitive.
+    res.json({
+      id:            transaction.id,
+      itemName:      transaction.itemName,
+      amount:        transaction.amount,
+      deliveryHours: transaction.deliveryHours,
+      state:         transaction.state,
+      createdAt:     transaction.createdAt,
+      sellerMomoMasked: transaction.sellerMomo
+        ? `${transaction.sellerMomo.slice(0, 3)}****${transaction.sellerMomo.slice(-4)}`
+        : null
+    });
 
   } catch (error) {
     console.error(error);

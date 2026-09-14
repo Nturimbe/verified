@@ -3,8 +3,9 @@ const router  = express.Router();
 const prisma  = require('../db');
 const PDFDocument = require('pdfkit');
 const path = require('path');
+const { requireAuth } = require('./auth');
 
-router.get('/:transactionId', async (req, res) => {
+router.get('/:transactionId', requireAuth, async (req, res) => {
   try {
     const tx = await prisma.transaction.findUnique({
       where: { id: req.params.transactionId },
@@ -13,6 +14,12 @@ router.get('/:transactionId', async (req, res) => {
 
     if (!tx || tx.state !== 'RESOLVED') {
       return res.status(404).json({ error: 'Receipt only available for completed transactions' });
+    }
+
+    const callerPhone = req.user.phone;
+    const isParty = callerPhone === tx.sellerMomo || callerPhone === tx.buyerPhone;
+    if (!isParty) {
+      return res.status(403).json({ error: 'You are not a party to this transaction.' });
     }
 
     res.setHeader('Content-Type', 'application/pdf');

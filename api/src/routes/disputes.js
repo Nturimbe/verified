@@ -10,13 +10,13 @@ const { createNotification } = require('../services/notify');
 const { splitWithFee, splitPartial } = require('../utils/money');
 
 // ── POST /disputes ───────────────────────────────────────────────────────────
-router.post('/', async (req, res) => {
-  const { transactionId, reason, reasonCategory, evidence, raisedBy } = req.body;
+router.post('/', requireAuth, async (req, res) => {
+  const { transactionId, reason, reasonCategory, evidence } = req.body;
   const cleanReason = reason ? sanitizeText(reason) : reason;
 
-  if (!transactionId || !reason || !raisedBy) {
+  if (!transactionId || !reason) {
     return res.status(400).json({
-      error: 'transactionId, reason, and raisedBy are required'
+      error: 'transactionId and reason are required'
     });
   }
 
@@ -27,6 +27,16 @@ router.post('/', async (req, res) => {
 
     if (!transaction) {
       return res.status(404).json({ error: 'Transaction not found' });
+    }
+
+    const callerPhone = req.user.phone;
+    let raisedBy;
+    if (callerPhone === transaction.sellerMomo) {
+      raisedBy = 'SELLER';
+    } else if (callerPhone === transaction.buyerPhone) {
+      raisedBy = 'BUYER';
+    } else {
+      return res.status(403).json({ error: 'You are not a party to this transaction.' });
     }
 
     if (!['FUNDED', 'DISPATCHED'].includes(transaction.state)) {
@@ -114,7 +124,7 @@ router.post('/', async (req, res) => {
 });
 
 // ── POST /disputes/:id/response ──────────────────────────────────────────────
-router.post('/:id/response', async (req, res) => {
+router.post('/:id/response', requireAuth, async (req, res) => {
   const { response } = req.body;
 
   if (!response) {
@@ -135,6 +145,10 @@ router.post('/:id/response', async (req, res) => {
       return res.status(400).json({ error: 'Dispute is already resolved' });
     }
 
+    if (req.user.phone !== dispute.transaction.sellerMomo) {
+      return res.status(403).json({ error: 'Only the seller can respond to this dispute.' });
+    }
+
     await prisma.dispute.update({
       where: { id: req.params.id },
       data: { sellerResponse: response }
@@ -148,7 +162,6 @@ router.post('/:id/response', async (req, res) => {
         note: response
       }
     });
-
     res.json({ message: 'Response recorded. Admin will review shortly.' });
 
   } catch (error) {
@@ -158,7 +171,7 @@ router.post('/:id/response', async (req, res) => {
 });
 
 // ── GET /disputes ────────────────────────────────────────────────────────────
-router.get('/', async (req, res) => {
+router.get('/', requireAdmin, async (req, res) => {
   try {
     const disputes = await prisma.dispute.findMany({
       where: { status: 'OPEN' },
@@ -178,7 +191,7 @@ router.get('/', async (req, res) => {
 });
 
 // ── GET /disputes/:id ────────────────────────────────────────────────────────
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const dispute = await prisma.dispute.findUnique({
       where: { id: req.params.id },
@@ -190,6 +203,13 @@ router.get('/:id', async (req, res) => {
 
     if (!dispute) {
       return res.status(404).json({ error: 'Dispute not found' });
+    }
+
+    const callerPhone = req.user.phone;
+    const isParty = callerPhone === dispute.transaction.sellerMomo ||
+                    callerPhone === dispute.transaction.buyerPhone;
+    if (!isParty) {
+      return res.status(403).json({ error: 'You are not a party to this dispute.' });
     }
 
     res.json(dispute);
