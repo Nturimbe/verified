@@ -310,7 +310,13 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
      const refundFn    = USE_MOCK_TRANSFER ? mockRefund   : refundBuyer;
 
     if (decision === 'PARTIAL_SPLIT') {
-      const { sellerAmount, buyerRefund } = splitPartial(transaction.amount, parseFloat(partialAmount));
+            const requestedSellerAmount = parseFloat(partialAmount);
+      if (requestedSellerAmount > transaction.amount) {
+        return res.status(400).json({
+          error: `partialAmount (${requestedSellerAmount}) cannot exceed the transaction total (${transaction.amount}).`
+        });
+      }
+      const { sellerAmount, buyerRefund } = splitPartial(transaction.amount, requestedSellerAmount);
       const transferResult = await transferFn({
         amount: sellerAmount,
         momoNumber: transaction.sellerMomo,
@@ -507,9 +513,14 @@ router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
     const transferFn = USE_MOCK_TRANSFER ? mockTransfer : transferToMomo;
     const refundFn    = USE_MOCK_TRANSFER ? mockRefund   : refundBuyer;
 
-    if (decision === 'PARTIAL_SPLIT') {
-      const sellerAmount = parseFloat(partialAmount);
-      const buyerRefund  = transaction.amount - sellerAmount;
+       if (decision === 'PARTIAL_SPLIT') {
+      const requestedSellerAmount = parseFloat(partialAmount);
+      if (requestedSellerAmount > transaction.amount) {
+        return res.status(400).json({
+          error: `Stored partialAmount (${requestedSellerAmount}) exceeds the transaction total (${transaction.amount}). Refusing to process.`
+        });
+      }
+      const { sellerAmount, buyerRefund } = splitPartial(transaction.amount, requestedSellerAmount);
 
       const transferResult = await transferFn({
         amount: sellerAmount, momoNumber: transaction.sellerMomo, transactionId: transaction.id
