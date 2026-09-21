@@ -6,6 +6,7 @@ const { sendEmail, emailTemplates } = require('../services/email');
 const { sanitizeText } = require('../utils/sanitize');
 const { recordMovement } = require('../services/ledger');
 const { requireAdmin, requireCsrf } = require('../middleware/auth');
+const { requireAuth } = require('./auth');
 const { createNotification } = require('../services/notify');
 const { splitWithFee, splitPartial } = require('../utils/money');
 
