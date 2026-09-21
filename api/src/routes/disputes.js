@@ -251,15 +251,22 @@ return res.status(400).json({ error: 'partialAmount is required for PARTIAL_SPLI
       return res.status(404).json({ error: 'Dispute not found' });
     }
 
-    if (dispute.status !== 'OPEN') {
+        if (dispute.status !== 'OPEN') {
       return res.status(400).json({ error: 'Dispute already resolved' });
     }
 
+    // Atomic claim — if another concurrent request already moved this dispute
+    // out of OPEN, this update matches zero rows and we bail before any transfer.
+    const claim = await prisma.dispute.updateMany({
+      where: { id: req.params.id, status: 'OPEN' },
+      data:  { status: 'PROCESSING' }
+    });
+    if (claim.count === 0) {
+      return res.status(409).json({ error: 'This dispute was already being processed by another request.' });
+    }
+
     const transaction = dispute.transaction;
-
-        const { approverToken } = req.body;
-
-        const needsDualApproval = transaction.amount >= 500;
+    const needsDualApproval = transaction.amount >= 500;
 
     if (needsDualApproval) {
       // High-value dispute — record the decision but do NOT move money yet.
@@ -479,6 +486,16 @@ router.post('/:id/approve', requireAdmin, requireCsrf, async (req, res) => {
       return res.status(403).json({
         error: 'You submitted this decision. A different admin must approve it.'
       });
+    }
+
+    // Atomic claim — a double-click or retry by the same approving admin
+    // will match zero rows on the second attempt and bail before transferring.
+    const claim = await prisma.dispute.updateMany({
+      where: { id: req.params.id, status: 'PENDING_APPROVAL' },
+      data:  { status: 'PROCESSING' }
+    });
+    if (claim.count === 0) {
+      return res.status(409).json({ error: 'This dispute was already being processed.' });
     }
 
     const transaction   = dispute.transaction;

@@ -313,7 +313,12 @@ router.patch('/:id/state', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Only the buyer can perform this action.' });
     }
 
-    transition(transaction.state, newState);
+    const { atomicTransition } = require('../services/stateMachine');
+    try {
+      await atomicTransition(prisma, transaction.id, transaction.state, newState);
+    } catch (raceOrInvalidError) {
+      return res.status(400).json({ error: raceOrInvalidError.message });
+    }
 
     const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4000';
@@ -439,11 +444,10 @@ router.patch('/:id/state', requireAuth, async (req, res) => {
       }
     }
 
-    const updated = await prisma.transaction.update({
+        const updated = await prisma.transaction.update({
       where: { id: req.params.id },
       data: {
-        state: newState,
-          ...(buyerName  && { buyerName: sanitizeText(buyerName) }),
+        ...(buyerName  && { buyerName: sanitizeText(buyerName) }),
         ...(buyerPhone && { buyerPhone: sanitizeText(buyerPhone) })
       },
       include: { ledgerEntries: true }
