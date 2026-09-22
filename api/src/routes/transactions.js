@@ -9,6 +9,7 @@ const { sendSMS, messages } = require('../services/sms');
 const { createNotification } = require('../services/notify');
 const { sendEmail, emailTemplates }  = require('../services/email');
 const { requireAuth } = require('./auth');
+const { normalizeGhanaPhone } = require('../utils/phone');
 const USE_MOCK_TRANSFER = true;
 const { splitWithFee } = require('../utils/money');
 
@@ -24,7 +25,7 @@ router.post('/', async (req, res) => {
 
   try {
     const cleanItemName = sanitizeText(itemName);
-    const cleanMomo     = sanitizeText(sellerMomo);
+       const cleanMomo     = normalizeGhanaPhone(sanitizeText(sellerMomo));
 
     const transaction = await prisma.transaction.create({
       data: {
@@ -255,18 +256,10 @@ router.get('/:id', async (req, res) => {
 // ── GET /transactions/buyer/:phone ───────────────────────────────────────────
 router.get('/buyer/:phone', requireAuth, async (req, res) => {
   try {
-    const phone      = req.user.phone;
-    const normalised = phone.startsWith('+233')
-      ? '0' + phone.slice(4)
-      : phone;
+    const normalised = normalizeGhanaPhone(req.user.phone);
 
     const transactions = await prisma.transaction.findMany({
-      where: {
-        OR: [
-          { buyerPhone: normalised },
-          { buyerPhone: '+233' + normalised.slice(1) }
-        ]
-      },
+      where: { buyerPhone: normalised },
       orderBy: { createdAt: 'desc' }
     });
 

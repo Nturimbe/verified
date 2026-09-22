@@ -5,6 +5,7 @@ const bcrypt  = require('bcryptjs');
 const jwt     = require('jsonwebtoken');
 const { sendSMS } = require('../services/sms');
 const { isRevoked, revoke } = require('../services/revocation');
+const { normalizeGhanaPhone } = require('../utils/phone');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const OTP_EXPIRY_MINUTES = 10;
@@ -21,7 +22,7 @@ router.post('/request-otp', async (req, res) => {
     return res.status(400).json({ error: 'Valid phone number is required' });
   }
 
-  const normalizedPhone = phone.replace(/\s/g, '').replace(/^\+233/, '0');
+  const normalizedPhone = normalizeGhanaPhone(phone);
 
   try {
     const code = generateOtp();
@@ -53,7 +54,7 @@ router.post('/verify-otp', async (req, res) => {
     return res.status(400).json({ error: 'Phone and code are required' });
   }
 
-  const normalizedPhone = phone.replace(/\s/g, '').replace(/^\+233/, '0');
+  const normalizedPhone = normalizeGhanaPhone(phone);
 
   try {
        const otpRequest = await prisma.otpRequest.findFirst({
