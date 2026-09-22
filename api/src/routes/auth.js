@@ -113,13 +113,16 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // GET /auth/me — check current session
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   const token = req.cookies?.verified_session;
   if (!token) {
     return res.status(401).json({ error: 'Not logged in' });
   }
   try {
     const payload = jwt.verify(token, JWT_SECRET);
+    if (await isRevoked(payload.jti)) {
+      return res.status(401).json({ error: 'Session has been revoked. Please log in again.' });
+    }
     res.json({ phone: payload.phone });
   } catch {
     res.status(401).json({ error: 'Invalid or expired session' });

@@ -23,7 +23,6 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
     "jsonwebtoken": "^9.0.3",
-    "paystack-node": "^0.3.0",
     "pdfkit": "^0.19.1",
     "pg": "^8.21.0",
     "resend": "^6.12.4",
