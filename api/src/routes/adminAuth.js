@@ -68,16 +68,11 @@ router.post('/login', async (req, res) => {
       { expiresIn: '12h' }
     );
 
-    const csrfToken = crypto.randomBytes(24).toString('hex');
+    const { deriveCsrfToken } = require('../middleware/auth');
+    const csrfToken = deriveCsrfToken(jti);
+
     res.cookie('admin_session', token, {
       httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
-      sameSite: 'none',
-      maxAge:   12 * 60 * 60 * 1000
-    });
-
-    res.cookie('admin_csrf', csrfToken, {
-      httpOnly: false,
       secure:   process.env.NODE_ENV === 'production',
       sameSite: 'none',
       maxAge:   12 * 60 * 60 * 1000

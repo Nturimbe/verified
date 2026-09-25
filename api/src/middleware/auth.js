@@ -1,4 +1,5 @@
-const jwt = require('jsonwebtoken');
+const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
 const { isRevoked } = require('../services/revocation');
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET;
@@ -37,16 +38,26 @@ async function requireSuperAdmin(req, res, next) {
   next();
 }
 
+// Derives the expected CSRF token from the session's own jti — no second
+// cookie needed. This must run AFTER requireAdmin, since it reads req.admin.
+function deriveCsrfToken(jti) {
+  return crypto.createHmac('sha256', ADMIN_JWT_SECRET).update(jti).digest('hex');
+}
+
 function requireCsrf(req, res, next) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
     return next();
   }
-  const headerToken = req.headers['x-csrf-token'];
-  const cookieToken = req.cookies?.admin_csrf;
-  if (!headerToken || !cookieToken || headerToken !== cookieToken) {
+  if (!req.admin?.jti) {
+    return res.status(401).json({ error: 'Not logged in' });
+  }
+  const headerToken   = req.headers['x-csrf-token'];
+  const expectedToken = deriveCsrfToken(req.admin.jti);
+
+  if (!headerToken || headerToken !== expectedToken) {
     return res.status(403).json({ error: 'Invalid or missing CSRF token' });
   }
   next();
 }
 
-module.exports = { verifyAdminSession, requireAdmin, requireSuperAdmin, requireCsrf };
+module.exports = { verifyAdminSession, requireAdmin, requireSuperAdmin, requireCsrf, deriveCsrfToken };
