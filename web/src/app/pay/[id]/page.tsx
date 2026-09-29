@@ -111,7 +111,9 @@ if (notFound || !tx) {
 // Main render
   // Main render
   const alreadyPaid = tx.state !== 'CREATED';
-  const maskedMomo  = tx.sellerMomo.slice(0, 3) + '****' + tx.sellerMomo.slice(-4);
+    const maskedMomo  = tx.sellerMomo
+      ? tx.sellerMomo.slice(0, 3) + '****' + tx.sellerMomo.slice(-4)
+      : 'Unavailable';
 
   return (
     <PageTransition>
