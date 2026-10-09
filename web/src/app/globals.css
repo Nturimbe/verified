@@ -1,4 +1,4 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -38,4 +38,3 @@
     -webkit-font-smoothing: antialiased;
   }
 }
-/* cache-bust 2026-10-03T10:41:10.1237942+00:00 */
